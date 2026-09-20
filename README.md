@@ -116,7 +116,9 @@ anyone's work.
 | Analysing timings, colours, structure, asset types | ✅ |
 | Turning findings into your own specs and rebuilding | ✅ |
 | Screenshots and frames for analysis and comparison | ✅ label them |
-| Downloading an app package | ⚠️ **ask the user first** |
+| **Downloading a free package from a public source** | ⚠️ **ask first**, then check its version |
+| Signing into the user's store account to fetch one | ⛔ never |
+| Paid apps, region-locked apps | ⛔ never |
 | Shipping a competitor's assets in your product | ⛔ never |
 | Committing competitor assets to your repo | ⛔ never |
 | Bypassing paywalls, patching clients, circumventing DRM | ⛔ never — this reads publicly distributed packages only |
@@ -237,7 +239,8 @@ ln -s "$PWD/competitor-ui-teardown" ~/.claude/skills/competitor-ui-teardown
 
 本项目用于理解**实现机制**，从而把自己的东西做得更好，**不是**用来拿别人的成果。
 
-下载安装包前会**先征求授权**；⛔ 不会替用户操作应用商店账号；
+取安装包分三档：设备上已装的直接 `adb pull`（首选，零下载）；没装的**经授权后可以从公开渠道
+下载免费安装包**，下完必须核 versionCode；⛔ 绝不替用户登录商店账号、绝不下付费应用或绕地区限制。
 ⛔ 不提取竞品素材用于我方产品，也不把竞品素材提交进仓库。
 
 ## 最有价值的部分是踩坑清单

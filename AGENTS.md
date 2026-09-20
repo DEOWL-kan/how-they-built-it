@@ -40,8 +40,12 @@ The full five-step workflow is in `SKILL.md`. The short version:
    running app tells you *which screen uses it*. Record entry animations from a cold
    start (`am force-stop`, start the recorder *before* launching) — an app already
    sitting on the screen will look static no matter how long you record.
-3. **Get the package — ask the user first** (see Boundaries). `base.apk` is normally
-   the whole answer even when `pm path` returns six lines.
+3. **Get the package.** Installed on the device → `adb pull` it, no download needed.
+   Not installed → **ask first**, then a free package from a public source is fine; verify
+   its `versionCode` with `aapt dump badging` before trusting anything you read out of it,
+   because a mirror can serve a years-old build and nothing about the asset list will look
+   wrong. Never sign into the user's store account. `base.apk` is normally the whole answer
+   even when `pm path` returns six lines.
 4. **Quantify.** `apk_assets.py` for composition, `frame_diff.py` for motion,
    `image_probe.py` for pixels.
 5. **Write the spec**, and end it with a PASS / PLAUSIBLE / SKIP table. Anything you
@@ -57,8 +61,9 @@ that actually happened. **Read it before you start**, not after you are stuck.
 | Analysing mechanism, timing, colour, structure, asset types | ✅ that is the point |
 | Turning findings into your own spec and rebuilding it yourself | ✅ |
 | Screenshots and frames, for analysis and comparison | ✅ label them |
-| **Downloading an app package** | ⚠️ **ask the user first** |
-| Driving an app-store account on the user's behalf | ⛔ never |
+| **Downloading a free package from a public source** | ⚠️ **ask first**, then verify its version |
+| Signing into the user's store account to fetch one | ⛔ never |
+| Paid apps, region-locked apps, anything behind a purchase | ⛔ never |
 | Shipping a competitor's assets in your product | ⛔ never |
 | Committing competitor assets to any repo | ⛔ never |
 | Bypassing paywalls, patching clients, circumventing DRM | ⛔ never — public packages only |
