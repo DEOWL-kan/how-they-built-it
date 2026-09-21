@@ -102,5 +102,45 @@
   {
     "query": "给我列一份 onboarding 的通用最佳实践清单",
     "should_trigger": false
+  },
+  {
+    "query": "我们要做自动分章节这个功能，先去调研一下竞品怎么做的",
+    "should_trigger": true
+  },
+  {
+    "query": "他们的语音转写是端侧跑的还是传云端？",
+    "should_trigger": true
+  },
+  {
+    "query": "这个功能帮我出一份需求分析和功能分析",
+    "should_trigger": true
+  },
+  {
+    "query": "竞品这一轮融了多少钱、团队多少人",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我给自动分章节这个功能写技术方案",
+    "should_trigger": false
+  },
+  {
+    "query": "把自动分章节的接口在我们后端实现一下",
+    "should_trigger": false
+  },
+  {
+    "query": "他们那个搜索是本地建索引还是每次请求服务器？",
+    "should_trigger": true
+  },
+  {
+    "query": "这块的导出功能到底支持到什么程度？",
+    "should_trigger": true
+  },
+  {
+    "query": "他们那个实时字幕是怎么实现的？",
+    "should_trigger": true
+  },
+  {
+    "query": "我们那个搜索是本地索引还是走服务器来着？",
+    "should_trigger": false
   }
 ]
