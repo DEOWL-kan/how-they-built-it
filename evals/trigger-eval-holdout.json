@@ -1,11 +1,50 @@
 [
-  {"query": "Superhuman 的收件箱界面为什么看着比我们干净？拆一下", "should_trigger": true},
-  {"query": "他们那个录音波形是自己画的还是用的现成库？", "should_trigger": true},
-  {"query": "我想知道 Granola 的会议纪要页是怎么排版的", "should_trigger": true},
-  {"query": "what makes their paywall feel premium — give me numbers I can build to", "should_trigger": true},
-
-  {"query": "把我们的波形组件抽成一个独立 widget", "should_trigger": false},
-  {"query": "帮我做一版深色模式的配色", "should_trigger": false},
-  {"query": "竞品最近一轮融资拿了多少钱？", "should_trigger": false},
-  {"query": "这个 Lottie 动画在低端机上卡，帮我优化一下", "should_trigger": false}
+  {
+    "query": "Superhuman 的收件箱界面为什么看着比我们干净？拆一下",
+    "should_trigger": true
+  },
+  {
+    "query": "他们那个录音波形是自己画的还是用的现成库？",
+    "should_trigger": true
+  },
+  {
+    "query": "我想知道 Granola 的会议纪要页是怎么排版的",
+    "should_trigger": true
+  },
+  {
+    "query": "what makes their paywall feel premium — give me numbers I can build to",
+    "should_trigger": true
+  },
+  {
+    "query": "把我们的波形组件抽成一个独立 widget",
+    "should_trigger": false
+  },
+  {
+    "query": "帮我做一版深色模式的配色",
+    "should_trigger": false
+  },
+  {
+    "query": "竞品最近一轮融资拿了多少钱？",
+    "should_trigger": false
+  },
+  {
+    "query": "这个 Lottie 动画在低端机上卡，帮我优化一下",
+    "should_trigger": false
+  },
+  {
+    "query": "想做会议纪要自动生成，先看看别人是怎么落地的",
+    "should_trigger": true
+  },
+  {
+    "query": "他们那个离线模式到底离线到什么程度？",
+    "should_trigger": true
+  },
+  {
+    "query": "帮我做一版空状态的插画",
+    "should_trigger": false
+  },
+  {
+    "query": "我们的分章节接口超时了，帮我看日志",
+    "should_trigger": false
+  }
 ]

@@ -23,6 +23,20 @@ Two kinds of request arrive, and they want different outputs:
 
 - **"Tear this down"** — the user has named a product or screen they admire. Output is a
   spec for that one screen (mechanism, measured values, what to borrow, what not to).
+- **"Research this feature"** — the user is about to build something and wants to know how
+  shipping products do it. Output is a requirements analysis, a feature breakdown (entry
+  points, states, limits, failure handling) and optionally a technical one (on-device vs
+  cloud, third-party stack, what the API surface implies). **Every claim carries an evidence
+  tag**: `[device]` you watched it happen, `[package]` traced to a named file, `[inferred]`
+  the evidence does not carry the claim — which includes having both other tags for a
+  statement they only weakly support. A string proves those bytes shipped, never that a
+  feature is live, so `[package]` alone is never "measured", and architecture conclusions
+  stay inferred even with both tags. Run `scripts/feature_probe.py` over **every APK
+  `pm path` returned** — native libs are not in base.apk, feature splits can hold whole
+  modules, and a Flutter app keeps its logic in `libapp.so`, not in dex. Say in the report
+  which splits you actually analysed; anything you did not pull is uncovered, not absent. Driving a competitor's app is
+  not free either: it can create real data, burn a free quota, and need the user's own
+  account. Say so before you start.
 - **"Help me find ideas"** — the user is designing a screen and is stuck. Output is a
   **comparison brief**: three shipping references (mix web and app), each reduced to its
   mechanism in one line, where they agree, where they diverge, and which route fits the
@@ -44,15 +58,16 @@ The full five-step workflow is in `SKILL.md`. The short version:
    Not installed → **ask first**, then a free package from a public source is fine; verify
    its `versionCode` with `aapt dump badging` before trusting anything you read out of it,
    because a mirror can serve a years-old build and nothing about the asset list will look
-   wrong. Never sign into the user's store account. `base.apk` is normally the whole answer
-   even when `pm path` returns six lines.
+   wrong. Never sign into the user's store account. For a **visual** teardown `base.apk` is
+   normally the whole answer even when `pm path` returns six lines; for a **feature or
+   technical** one it never is — pull every split.
 4. **Quantify.** `apk_assets.py` for composition, `frame_diff.py` for motion,
    `image_probe.py` for pixels.
 5. **Write the spec**, and end it with a PASS / PLAUSIBLE / SKIP table. Anything you
    could not measure is labelled, never quietly upgraded to a measurement.
 
-`references/pitfalls.md` is the highest-value file here. Every entry is a mistake
-that actually happened. **Read it before you start**, not after you are stuck.
+`references/pitfalls.md` is the highest-value file here. Nearly every entry is a mistake
+that actually happened; the one or two that are pre-identified risks say so themselves. **Read it before you start**, not after you are stuck.
 
 ## Boundaries — these are not negotiable
 
