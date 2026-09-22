@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="750" height="687" viewBox="0 0 750 687" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5">
+<rect width="750" height="687" rx="8" fill="#0d1117"/>
+<rect width="750" height="28" rx="8" fill="#161b22"/>
+<rect y="20" width="750" height="8" fill="#161b22"/>
+<circle cx="24" cy="14" r="5.5" fill="#ff5f56"/>
+<circle cx="39" cy="14" r="5.5" fill="#ffbd2e"/>
+<circle cx="54" cy="14" r="5.5" fill="#27c93f"/>
+<text x="375.0" y="18.5" fill="#8b949e" font-size="11.5" text-anchor="middle">frame_diff.py — and when it tells you not to believe it</text>
+<text x="18" y="52.0" fill="#c9d1d9" xml:space="preserve">$ python3 scripts/frame_diff.py rec.mp4 --no-plot</text>
+<text x="18" y="69.0" fill="#8b949e" xml:space="preserve"># rec.mp4</text>
+<text x="18" y="86.0" fill="#c9d1d9" xml:space="preserve">  1080x1920  13.50s</text>
+<text x="18" y="103.0" fill="#c9d1d9" xml:space="preserve">  270 frames sampled at 20 fps, analysed at 108x120</text>
+<text x="18" y="120.0" fill="#d29922" xml:space="preserve">  ⚠️  variable frame rate: the header says 30 fps, the file averages 15.2.</text>
+<text x="18" y="137.0" fill="#c9d1d9" xml:space="preserve">      screenrecord emits a frame only when the screen changes, so there is</text>
+<text x="18" y="154.0" fill="#c9d1d9" xml:space="preserve">      no cadence to sample against.</text>
+<text x="18" y="171.0" fill="#c9d1d9" xml:space="preserve">      ffmpeg duplicates and drops frames to bridge the gap. On a flat</text>
+<text x="18" y="188.0" fill="#c9d1d9" xml:space="preserve">      surface (a gradient with no grain) the duplicates read as delta 0</text>
+<text x="18" y="205.0" fill="#c9d1d9" xml:space="preserve">      and one transition can split into move/quiet/move.</text>
+<text x="18" y="222.0" fill="#c9d1d9" xml:space="preserve">      Re-run with --fps 15 before trusting the segments below.</text>
+<text x="18" y="256.0" fill="#79c0ff" xml:space="preserve">## Segments (quiet = delta &lt;= 0.1)</text>
+<text x="18" y="273.0" fill="#c9d1d9" xml:space="preserve">  quiet   0.05 -&gt;   1.95   (1.90s)</text>
+<text x="18" y="290.0" fill="#c9d1d9" xml:space="preserve">  move    1.95 -&gt;   2.25   (0.30s)</text>
+<text x="18" y="307.0" fill="#c9d1d9" xml:space="preserve">  quiet   2.25 -&gt;   2.35   (0.10s)</text>
+<text x="18" y="324.0" fill="#c9d1d9" xml:space="preserve">  move    2.35 -&gt;   4.05   (1.70s)</text>
+<text x="18" y="341.0" fill="#c9d1d9" xml:space="preserve">  quiet   4.05 -&gt;   6.15   (2.10s)</text>
+<text x="18" y="358.0" fill="#c9d1d9" xml:space="preserve">  move    6.15 -&gt;   7.85   (1.70s)</text>
+<text x="18" y="375.0" fill="#c9d1d9" xml:space="preserve">  quiet   7.85 -&gt;  10.15   (2.30s)</text>
+<text x="18" y="392.0" fill="#c9d1d9" xml:space="preserve">  move   10.15 -&gt;  12.50   (2.35s)</text>
+<text x="18" y="409.0" fill="#c9d1d9" xml:space="preserve">  quiet  12.50 -&gt;  13.45   (0.95s)</text>
+<text x="18" y="443.0" fill="#c9d1d9" xml:space="preserve">  static segments: 5, mean 1.47s</text>
+<text x="18" y="460.0" fill="#c9d1d9" xml:space="preserve">  moving segments: 4, mean 1.51s</text>
+<text x="18" y="477.0" fill="#f85149" xml:space="preserve">  NOT A LOOP:      gaps between static holds are ['2.20', '1.80', '3.80', '4.65'] (92% spread)</text>
+<text x="18" y="494.0" fill="#c9d1d9" xml:space="preserve">                   a one-shot sequence (launch, transition, settle), not a cycle.</text>
+<text x="18" y="511.0" fill="#d29922" xml:space="preserve">                   ⚠️  but --fps 20 is not a clean rate for this source —</text>
+<text x="18" y="528.0" fill="#c9d1d9" xml:space="preserve">                       re-run at --fps 15 before believing it.</text>
+<text x="18" y="562.0" fill="#c9d1d9" xml:space="preserve">$ python3 scripts/frame_diff.py rec.mp4 --fps 15 --no-plot</text>
+<text x="18" y="579.0" fill="#c9d1d9" xml:space="preserve">  static segments: 4, mean 1.67s</text>
+<text x="18" y="596.0" fill="#c9d1d9" xml:space="preserve">  moving segments: 3, mean 2.24s</text>
+<text x="18" y="613.0" fill="#c9d1d9" xml:space="preserve">  cycle length:    mean 4.16s  ['4.00', '4.33', '4.13']</text>
+<text x="18" y="647.0" fill="#8b949e" xml:space="preserve"># ground truth — this clip was generated, so the answer is known:</text>
+<text x="18" y="664.0" fill="#8b949e" xml:space="preserve">#   hold 1.50s + eased crossfade 2.70s, looping. cycle = 4.20s</text>
+</svg>
