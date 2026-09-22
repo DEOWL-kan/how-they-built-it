@@ -236,8 +236,8 @@ def main():
                      for y in range(gh) for x in range(gw)]
             darkest, lightest, abs_d, abs_l = background_extremes(cells)
             print(f"\n## Contrast (WCAG; body text needs >= 4.5, large/non-text >= 3.0)")
-            print(f"  背景极值 (p10/p90): darkest {darkest}  lightest {lightest}")
-            print(f"  绝对极值 (incl. text/logo pixels): {abs_d} .. {abs_l}")
+            print(f"  background extremes (p10/p90): darkest {darkest}  lightest {lightest}")
+            print(f"  absolute extremes (incl. text/logo pixels): {abs_d} .. {abs_l}")
             for fg in [c.strip() for c in a.contrast.split(",")]:
                 cd, cl = contrast(fg, darkest), contrast(fg, lightest)
                 worst = min(cd, cl)

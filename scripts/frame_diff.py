@@ -43,7 +43,7 @@ def require_ffmpeg():
 
 def probe(path):
     out = _run(["ffprobe", "-v", "error", "-select_streams", "v:0",
-                "-show_entries", "stream=width,height,duration,nb_frames",
+                "-show_entries", "stream=width,height,duration,nb_frames,r_frame_rate,avg_frame_rate",
                 "-of", "default=nw=1", path])
     d = {}
     for line in out.splitlines():
@@ -68,6 +68,67 @@ def sample(path, fps, crop, sw, sh):
     os.unlink(tmp)
     n = sw * sh
     return [data[i * n:(i + 1) * n] for i in range(len(data) // n)]
+
+
+def _rate(s):
+    """ffprobe writes rationals: '30/1', '3255/214', and '0/0' for "no idea"."""
+    num, _, den = (s or "").partition("/")
+    try:
+        n, d = float(num), float(den or 1)
+    except ValueError:
+        return None
+    return n / d if n and d else None
+
+
+def source_rate(info):
+    """The rate worth dividing into.
+
+    avg_frame_rate first, because `adb shell screenrecord` emits a frame only
+    when the screen changes and then labels the file r_frame_rate=30/1 anyway --
+    measured: a clip averaging 15.2 fps claimed 30. Same header dishonesty that
+    makes nb_frames useless (pitfall 13), so treat r_frame_rate the same way.
+    """
+    return _rate(info.get("avg_frame_rate")) or _rate(info.get("r_frame_rate"))
+
+
+def divisor_advice(src, fps, tol=0.02):
+    """Largest sampling rate <= fps that divides `src` evenly, or None if fine.
+
+    ffmpeg's fps filter bridges a non-integer ratio by duplicating and dropping
+    frames unevenly. On a textured screen that is harmless noise. On a flat
+    surface -- a gradient with no grain, which is exactly the kind of background
+    this tool gets pointed at -- every pixel crosses its 8-bit boundary in
+    lockstep, so the duplicated samples read delta 0 and the signal strobes
+    across quiet_threshold. One transition then splits into move/quiet/move,
+    which invents a static hold, and the loop verdict flips to NOT A LOOP on a
+    clip that loops perfectly. Measured on a 4.2s synthetic loop: 30 fps source
+    sampled at 20 gave "NOT A LOOP, 80% spread"; at 15 it gave cycle 4.16s.
+    """
+    if not src or fps <= 0:
+        return None
+    if abs(src / fps - round(src / fps)) <= tol:
+        return None
+    for k in range(max(1, round(src / fps)), int(src) + 2):
+        cand = src / k
+        if cand <= fps:
+            # Floor to a whole number: the caller has to type this back in, and
+            # on a variable-rate recording `src` is an average anyway, so a rate
+            # like 15.2103 is false precision as well as unusable.
+            return float(int(cand)) or None
+    return None
+
+
+def is_vfr(info, tol=0.05):
+    """Does the container's declared rate disagree with what it actually holds?
+
+    `adb shell screenrecord` emits a frame only when the screen changes, so a
+    clip of a still screen holds one frame for its whole duration. It labels the
+    file r_frame_rate=30/1 regardless. Measured on a real device: 2s of a static
+    screen produced a single frame, and a decimated 14s clip averaging 15.2 fps
+    still declared 30. There is no cadence to divide into on such a file.
+    """
+    r, avg = _rate(info.get("r_frame_rate")), _rate(info.get("avg_frame_rate"))
+    return bool(r and avg and abs(r - avg) / r > tol)
 
 
 def segments(diffs, fps, quiet, min_run=None):
@@ -200,6 +261,20 @@ def main():
     sw, sh = (int(v) for v in a.res.lower().split("x"))
     frames = sample(a.video, a.fps, a.crop, sw, sh)
     print(f"  {len(frames)} frames sampled at {a.fps} fps, analysed at {sw}x{sh}")
+    src_fps = source_rate(info)
+    better = divisor_advice(src_fps, a.fps)
+    if better:
+        if is_vfr(info):
+            print(f"  ⚠️  variable frame rate: the header says {_rate(info.get('r_frame_rate')):g} fps, "
+                  f"the file averages {src_fps:.3g}.")
+            print( "      screenrecord emits a frame only when the screen changes, so there is")
+            print( "      no cadence to sample against.")
+        else:
+            print(f"  ⚠️  {a.fps:g} fps does not divide this source's {src_fps:g} fps evenly.")
+        print( "      ffmpeg duplicates and drops frames to bridge the gap. On a flat")
+        print( "      surface (a gradient with no grain) the duplicates read as delta 0")
+        print( "      and one transition can split into move/quiet/move.")
+        print(f"      Re-run with --fps {better:g} before trusting the segments below.")
     n = sw * sh
     diffs = []
     for i in range(1, len(frames)):
@@ -265,6 +340,12 @@ def main():
             print(f"  NOT A LOOP:      gaps between static holds are {['%.2f' % c for c in cycles]} "
                   f"({spread*100:.0f}% spread)")
             print("                   a one-shot sequence (launch, transition, settle), not a cycle.")
+            if better:
+                # The split this verdict is built on is the exact thing an uneven
+                # sampling ratio fabricates, so say it here rather than only in a
+                # header the reader has already scrolled past.
+                print(f"                   ⚠️  but --fps {a.fps:g} is not a clean rate for this source —")
+                print(f"                       re-run at --fps {better:g} before believing it.")
         else:
             print(f"  cycle length:    mean {mean_c:.2f}s  {['%.2f' % c for c in cycles]}")
 

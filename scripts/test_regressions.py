@@ -509,6 +509,50 @@ def test_binary_strings_needs_a_minimum_run():
     assert "ab" not in got
 
 
+def test_sampling_rate_that_does_not_divide_the_source_is_called_out():
+    """pitfall 30 — an uneven sampling ratio fabricated a NOT A LOOP verdict.
+
+    Measured on a synthetic 4.2s loop (hold 1.5s + eased crossfade 2.7s): a
+    30 fps source sampled at the default 20 reported 5 static holds, 4 moves and
+    "NOT A LOOP, 80% spread". Sampled at 15 the same clip gave cycle 4.16s. The
+    flat gradient is the necessary half — with film grain added, 20 fps was fine
+    — but flat gradients are exactly what this tool gets pointed at.
+    """
+    # 30/20 = 1.5: uneven, and 15 is the largest whole rate that divides 30.
+    assert frame_diff.divisor_advice(30, 20) == 15
+    # Integer ratios must stay silent, or the warning becomes wallpaper.
+    assert frame_diff.divisor_advice(60, 20) is None
+    assert frame_diff.divisor_advice(30, 15) is None
+    assert frame_diff.divisor_advice(30, 10) is None
+    # No rate to compare against -> no advice, never a crash.
+    assert frame_diff.divisor_advice(None, 20) is None
+    assert frame_diff.divisor_advice(0, 20) is None
+    # Never hand back false precision: a VFR average of 15.21 must not come back
+    # as "--fps 15.2103", which is both unusable and a rate that does not exist.
+    got = frame_diff.divisor_advice(15.21, 20)
+    assert got == 15 and float(got).is_integer(), got
+
+
+def test_a_variable_rate_recording_is_not_trusted_for_its_declared_fps():
+    """pitfall 30 — screenrecord labels a VFR file with a cadence it never had.
+
+    Measured on a real device: 2s of a static screen produced a single frame,
+    and a clip averaging 15.2 fps still declared r_frame_rate=30/1. Same header
+    dishonesty as nb_frames (pitfall 13).
+    """
+    vfr = {"r_frame_rate": "30/1", "avg_frame_rate": "3255/214"}   # 30 vs 15.2
+    assert frame_diff.is_vfr(vfr)
+    assert abs(frame_diff.source_rate(vfr) - 15.21) < 0.01   # the average wins
+    cfr = {"r_frame_rate": "30/1", "avg_frame_rate": "30/1"}
+    assert not frame_diff.is_vfr(cfr)
+    assert frame_diff.source_rate(cfr) == 30
+    # ffprobe writes 0/0 when it cannot tell; that must degrade, not crash.
+    unknown = {"r_frame_rate": "0/0", "avg_frame_rate": "0/0"}
+    assert not frame_diff.is_vfr(unknown)
+    assert frame_diff.source_rate(unknown) is None
+    assert frame_diff.source_rate({}) is None
+
+
 def test_nb_frames_is_not_frame_count():
     """pitfall 13 — the header must not echo the container's nb_frames."""
     src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
