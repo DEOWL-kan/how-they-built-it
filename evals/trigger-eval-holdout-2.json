@@ -1,0 +1,82 @@
+[
+ {
+  "query": "他们那个 loading 是怎么做的",
+  "should_trigger": true
+ },
+ {
+  "query": "linear 的 issue 列表那个 hover 状态，是 css 还是 js 控的？",
+  "should_trigger": true
+ },
+ {
+  "query": "我是设计师不写代码，想知道 Raycast 那个命令面板的动效参数，好写进标注",
+  "should_trigger": true
+ },
+ {
+  "query": "their search is instant — did they build that or is it algolia?",
+  "should_trigger": true
+ },
+ {
+  "query": "要做一个文件上传的进度反馈，先看看现在大家都怎么做",
+  "should_trigger": true
+ },
+ {
+  "query": "我们那个卡片翻转怎么做都差一口气，人家的就很顺",
+  "should_trigger": true
+ },
+ {
+  "query": "that export dialog of theirs — what's actually in it? feels like more than it shows",
+  "should_trigger": true
+ },
+ {
+  "query": "Arc 的侧边栏收起来那下，用了什么曲线",
+  "should_trigger": true
+ },
+ {
+  "query": "准备做协作光标，同类产品里有几种做法？各自代价是什么",
+  "should_trigger": true
+ },
+ {
+  "query": "figma 的评论气泡定位是跟着 dom 还是画布坐标",
+  "should_trigger": true
+ },
+ {
+  "query": "这个开源库的虚拟滚动是怎么实现的，帮我读一下源码",
+  "should_trigger": false
+ },
+ {
+  "query": "帮我把竞品那套设计语言整个搬过来，做成我们的组件库",
+  "should_trigger": false
+ },
+ {
+  "query": "我们的列表页滚动掉帧，帮我 profile 一下",
+  "should_trigger": false
+ },
+ {
+  "query": "他们 App 的接口帮我抓一下，我要对接进我们系统",
+  "should_trigger": false
+ },
+ {
+  "query": "帮我给我们的登录页做无障碍审查",
+  "should_trigger": false
+ },
+ {
+  "query": "找几个竞品的真实用户聊聊，出一份访谈提纲",
+  "should_trigger": false
+ },
+ {
+  "query": "他们上周改版了，帮我总结一下改了哪些功能",
+  "should_trigger": false
+ },
+ {
+  "query": "我们那个波形是自己画的吧？谁写的还记得吗",
+  "should_trigger": false
+ },
+ {
+  "query": "按这个 Figma 稿把登录页实现出来",
+  "should_trigger": false
+ },
+ {
+  "query": "竞品在小红书上投了多少钱",
+  "should_trigger": false
+ }
+]

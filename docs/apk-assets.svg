@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="628" height="670" viewBox="0 0 628 670" font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace" font-size="12.5">
+<rect width="628" height="670" rx="8" fill="#0d1117"/>
+<rect width="628" height="28" rx="8" fill="#161b22"/>
+<rect y="20" width="628" height="8" fill="#161b22"/>
+<circle cx="24" cy="14" r="5.5" fill="#ff5f56"/>
+<circle cx="39" cy="14" r="5.5" fill="#ffbd2e"/>
+<circle cx="54" cy="14" r="5.5" fill="#27c93f"/>
+<text x="314.0" y="18.5" fill="#8b949e" font-size="11.5" text-anchor="middle">apk_assets.py — what is this screen made of?</text>
+<text x="18" y="52.0" fill="#c9d1d9" xml:space="preserve">$ python3 scripts/apk_assets.py app.apk</text>
+<text x="18" y="69.0" fill="#8b949e" xml:space="preserve"># app.apk</text>
+<text x="18" y="86.0" fill="#c9d1d9" xml:space="preserve">  12 entries, 4.5 MB uncompressed</text>
+<text x="18" y="120.0" fill="#79c0ff" xml:space="preserve">## Asset weight by type</text>
+<text x="18" y="137.0" fill="#c9d1d9" xml:space="preserve">  image       1.5 MB</text>
+<text x="18" y="154.0" fill="#c9d1d9" xml:space="preserve">  video       734 KB</text>
+<text x="18" y="171.0" fill="#c9d1d9" xml:space="preserve">  font        412 KB</text>
+<text x="18" y="188.0" fill="#c9d1d9" xml:space="preserve">  anim/json   41 KB</text>
+<text x="18" y="222.0" fill="#79c0ff" xml:space="preserve">## onboarding  (2 assets over 20 KB)</text>
+<text x="18" y="239.0" fill="#c9d1d9" xml:space="preserve">     734 KB  video      assets/video/onboarding_hero.mp4</text>
+<text x="18" y="256.0" fill="#c9d1d9" xml:space="preserve">      41 KB  anim/json  assets/anim/onboarding_confetti.json</text>
+<text x="18" y="290.0" fill="#79c0ff" xml:space="preserve">## login  (6 assets over 20 KB)</text>
+<text x="18" y="307.0" fill="#c9d1d9" xml:space="preserve">     311 KB  image      assets/images/login/bg_loop_1.jpg</text>
+<text x="18" y="324.0" fill="#c9d1d9" xml:space="preserve">     307 KB  image      assets/images/login/bg_loop_2.jpg</text>
+<text x="18" y="341.0" fill="#c9d1d9" xml:space="preserve">     298 KB  image      assets/images/login/bg_loop_3.jpg</text>
+<text x="18" y="358.0" fill="#c9d1d9" xml:space="preserve">     284 KB  image      assets/images/login/bg_loop_4.jpg</text>
+<text x="18" y="375.0" fill="#c9d1d9" xml:space="preserve">     276 KB  image      assets/images/login/bg_loop_5.jpg</text>
+<text x="18" y="392.0" fill="#c9d1d9" xml:space="preserve">      22 KB  image      assets/images/login/logo_mark.png</text>
+<text x="18" y="409.0" fill="#3fb950" xml:space="preserve">  =&gt; login is STATIC IMAGES (5 loop-ish files) — almost certainly a crossfade,</text>
+<text x="18" y="426.0" fill="#c9d1d9" xml:space="preserve">     not a video. Measure the rhythm with frame_diff.py.</text>
+<text x="18" y="460.0" fill="#79c0ff" xml:space="preserve">## paywall  (1 assets over 20 KB)</text>
+<text x="18" y="477.0" fill="#c9d1d9" xml:space="preserve">      58 KB  image      assets/images/paywall/premium_badge.webp</text>
+<text x="18" y="511.0" fill="#d29922" xml:space="preserve">!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!</text>
+<text x="18" y="528.0" fill="#d29922" xml:space="preserve">! Both `onboarding` and `login` assets exist.</text>
+<text x="18" y="545.0" fill="#d29922" xml:space="preserve">! These are DIFFERENT SCREENS. Onboarding routinely ships video and</text>
+<text x="18" y="562.0" fill="#d29922" xml:space="preserve">! heavy animation that the login screen never uses. Attributing an</text>
+<text x="18" y="579.0" fill="#d29922" xml:space="preserve">! onboarding_*.mp4 to the login screen is the most common way to end</text>
+<text x="18" y="596.0" fill="#d29922" xml:space="preserve">! up recommending a technique the competitor does not actually use</text>
+<text x="18" y="613.0" fill="#d29922" xml:space="preserve">! on the screen you are studying.</text>
+<text x="18" y="630.0" fill="#d29922" xml:space="preserve">! Confirm on a real device which screen each asset appears on.</text>
+<text x="18" y="647.0" fill="#d29922" xml:space="preserve">!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!</text>
+</svg>

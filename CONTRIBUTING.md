@@ -37,6 +37,24 @@ While doing that, confirm your mutation actually landed on the line you meant. O
 mutation here silently missed its target and the suite stayed green, which looked
 exactly like "the fix wasn't needed".
 
+## The README figures
+
+`docs/*.svg` are real script output, never hand-edited. The inputs are synthetic
+fixtures built on the fly — a fake APK, a clip with a crossfade of known duration, an
+image with the light at a known point — so each figure can be checked against a ground
+truth, and so no competitor's pixels ever enter this repository.
+
+```bash
+./tools/make_figures.sh        # rebuilds fixtures + all three SVGs
+```
+
+Needs ImageMagick 7 (`magick`) on top of ffmpeg. Contributors only — running the skill
+needs neither. If you change a script's output format, re-run this; a figure that no
+longer matches what the tool prints is worse than no figure.
+
+⛔ Do not hand-edit the SVGs, and do not screenshot a real app for a figure. If you need
+a new fixture, add it to `make_figures.sh` with its ground truth written down.
+
 ## Adding to the workflow
 
 `SKILL.md` and `AGENTS.md` are two views of the same workflow. If you change the

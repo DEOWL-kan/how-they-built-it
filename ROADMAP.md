@@ -151,7 +151,7 @@ should_fix 也一并修了：`user@host` 被解析成 host `user`（改用 `urls
 - description 与 `AGENTS.md` 写明两个入口
 
 **未做**：
-- [x] ⭐ **C 档真机部分 2026-09-21 首次实跑**（有真机），一次就撞出三个**流程级**缺口，全部已补进 SKILL.md §C.2 与 `pitfalls.md` 25–27：
+- [x] ⭐ **C 档真机部分 2026-09-21 首次实跑**（有真机），一次就撞出三个**流程级**缺口，全部已补进 SKILL.md §C.2 与 `pitfalls.md` 25–27（§C.2 已于 2026-09-22 移入 `references/feature-research.md`）：
   - **登录墙**：目标功能在登录后面，按纪律不注册/不动用户账号 ⇒ 真机路径整条作废。
     而 C.2 清单默认「你已经在 App 里」，**没有「够不够得着」这个前置**。现已补「先判可达性」一节
   - **Flutter 应用 `uiautomator dump` 读不到文本**（实测 Flutter 0 个节点 vs 非 Flutter 16 个）——
@@ -164,8 +164,26 @@ should_fix 也一并修了：`user@host` 被解析成 host `user`（改用 `urls
 - [ ] web 端补到 App 端同一水平：`scripts/web_probe.js`（贴进任何浏览器工具就吐 JSON 规格）+ 在真实网站实跑 +
   把 `getAnimations()` 未触发、跨域样式表抛异常这些坑量出来写进 pitfalls
 - [ ] 双端统一三态输出格式，报告从数据生成、可被检查（回应第 1 项里「第 5 步无机制保障」）
-- [ ] 改名：`competitor-ui-teardown` 是引擎名，不是产品名。仓库刚建，现在改最便宜。**名字由用户定**
+- [x] 改名：`competitor-ui-teardown` → **`how-they-built-it`**（2026-09-22，用户拍板）。
+  旧名两个词都是窄的：`competitor` 挡掉「帮我找思路」入口，`ui` 挡掉「功能调研」入口；
+  新名是用户原话，三个入口问的都是同一句。SKILL.md 的 `name`、目录、本机软链、
+  README/ROADMAP 内所有引用已同步。⚠️ **GitHub 上的仓库重命名还没做** ——
+  README 里的 clone URL 要等它改完才有效，顺序是：先在 GitHub 改名，再 push
 - [x] 工具预检：`scripts/preflight.py`——ffmpeg / ffprobe / adb / 设备四项，缺的按平台给安装命令，退出码区分「能不能做 App 拆解」（2026-09-19）
+
+### 2026-09-22 这一轮新开的口子
+
+- [ ] **新留出集没跑**：已起草 20 条全新查询（`evals/trigger-eval-holdout-2.json`，10 应触发 / 10 近似负例），刻意避开调参集已覆盖的形状，
+  新增了 web 产品、设计师口吻两类。最有价值的一条负例是「这个开源库的虚拟滚动怎么实现的，帮我读源码」——
+  它和触发条件高度重合（追问机制），但**有源码时逆向是浪费**，而 description 目前没有任何一句排除它。
+  下一步：`python3 -m scripts.run_eval`（skill-creator）对当前 description 打分，每条跑 3 次
+- [x] **渐进披露**（2026-09-22）：§C（220 行）移到 `references/feature-research.md`，SKILL.md **508 → 306 行**。
+  ⛔ 证据标签制度没有一起搬走 —— 它是防编造的闸，SKILL.md 里留了三条浓缩规则（必须挂标签／`[包内]`≠功能存在／架构结论默认推断），
+  读不到 reference 也拦得住
+- [x] `docs/*.svg` 的可复现性（2026-09-22）：`tools/make_figures.sh` 一条命令重建全部 fixture 和三张图，
+  CONTRIBUTING 加了一节。实测重跑三张图的结论逐字一致（光斑 25%/26%、对比度 12.40/2.73、cycle 4.16s）
+- [ ] `frame_diff.py` 的 `--res` 告警和第 30 条的采样率告警是两套独立启发式，
+  低幅运动时可能同时触发、互相矛盾。没实测过两者叠加的情况
 
 ---
 
@@ -194,15 +212,15 @@ should_fix 也一并修了：`user@host` 被解析成 host `user`（改用 `urls
 本技能已经软链进 `~/.claude/skills/`，模型调的是**真名**，uuid 副本永远匹配不上
 ⇒ 第一次跑出来 **20 条全 0**，退出码 0、不报任何警告，差点被当成「description 写得差」。
 
-抓 `--output-format stream-json` 看一眼就清楚了：第一个 tool 就是 `Skill{skill: competitor-ui-teardown}`，
+抓 `--output-format stream-json` 看一眼就清楚了：第一个 tool 就是 `Skill{skill: how-they-built-it}`，
 **实际触发了**。修法是拿 `run_eval.py` 的副本把三处 `clean_name in ...` 换成 `skill_name in ...`
 （stream 事件两处 + assistant 消息一处）：
 
 ```bash
 cp -R ~/.claude/skills/skill-creator/scripts /tmp/evalrun/ && cd /tmp/evalrun
 # 改掉上面三处之后：
-python3 -m scripts.run_eval --eval-set ~/competitor-ui-teardown/evals/trigger-eval.json \
-  --skill-path ~/competitor-ui-teardown --model <model id> --runs-per-query 3 --verbose
+python3 -m scripts.run_eval --eval-set ~/how-they-built-it/evals/trigger-eval.json \
+  --skill-path ~/how-they-built-it --model <model id> --runs-per-query 3 --verbose
 ```
 
 ⚠️ 它还有一条：**第一个 tool 不是 `Skill`/`Read` 就直接判 false**，先跑 Bash 探环境的会被误判。
