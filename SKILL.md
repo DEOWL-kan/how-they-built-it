@@ -24,7 +24,7 @@ description: 拆解竞品 App / 网页是怎么做出来的，产出能直接照
 报告分别写目标深度、实际达到深度与缺口；不能以推断填满未知链路。
 证据记录格式与校验命令见 `references/evidence-format.md`；校验通过不代表事实或深度已被认证。
 Web 操作属于 `[浏览器]`，与 `[真机]` 区分；公开脚本是静态证据，不能独自证明运行路径。
-Web 页面探针与实时 HTTP/WS/SSE 采集见 `references/web.md`、`tools/web-capture/README.md`；静态 APK 画像与 JADX 定向追踪见 `references/apk-analysis.md`、`references/code-tracing.md`。工具缺失或无真机分别记录覆盖缺口，不自动安装、取包或把静态结论升级为运行事实。
+Web 页面探针与实时 HTTP/WS/SSE 采集见 `references/web.md`、`tools/web-capture/README.md`；静态 APK 画像与 JADX 定向追踪见 `references/apk-analysis.md`、`references/code-tracing.md`。工具缺失或无真机分别记录覆盖缺口，不自动安装、取包或把静态结论升级为运行事实。静态脚本到上限（H5 模块图、Flutter 依赖清单、原生调用追踪）时，可选用 REA，见 `references/rea.md`；⛔ 不对竞品用 Frida。
 
 ### 1. 先分清是哪种活，再找候选
 

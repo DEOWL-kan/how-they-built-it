@@ -104,6 +104,8 @@ Web snapshot and network capture are separate: `scripts/web_probe.js` reads reso
 
 `apk_profile.py` inventories supplied packages with optional apkanalyzer decoding; `references/code-tracing.md` covers targeted JADX reading. No device means runtime claims remain SKIP. Even a zero decompiler exit needs error-log and expected-method checks. Examples use self-authored source and build outputs outside the repo.
 
+[REA](https://github.com/morluto/rea) is an optional deeper step past these scripts' ceilings (H5 module graphs, a partial Dart AOT package inventory, native xrefs); see `references/rea.md`. It is never installed or configured by this skill, its static output stays `[package]`, and Frida against a competitor's app is out of bounds.
+
 ## Changing this repo
 
 - **Core Python 3.8+, standard library only.** Image/video analysis uses FFmpeg;
