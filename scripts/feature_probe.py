@@ -25,6 +25,12 @@ file is a guess, and this script exists so you stop shipping guesses.
    holds only the Android-side SDKs; the app itself is AOT-compiled into
    `lib/*/libapp.so`. Reading dex alone yields a confident, wrong "this app has no
    features" picture.
+⚠️ Hybrid apps keep features in H5. A Flutter shell can open a WebView whose whole
+   feature lives in `assets/**/*.js` (or an offline-package .zip inside assets) —
+   measured on one app, a keyword in that JS returned "no matches" because only
+   .so/.dex/RN bundles were read. .js/.mjs/.html/.htm and nested .zip are read now;
+   H5 fetched at runtime or packed in an unrecognised/encrypted archive is still
+   uncovered, so the header prints how many web files were actually read.
 
 stdlib only. Usage:
     feature_probe.py base.apk split_config.arm64_v8a.apk
@@ -33,6 +39,7 @@ stdlib only. Usage:
 """
 import argparse
 import collections
+import io
 import os
 import re
 import struct
@@ -239,6 +246,9 @@ def _text_before(data, start):
     return False
 
 
+WEB_TEXT = (".js", ".mjs", ".html", ".htm")
+
+
 def collect(paths):
     """Returns (native, strings) where strings is [(text, source_file, complete)]."""
     native, strings = [], []
@@ -248,24 +258,48 @@ def collect(paths):
             continue
         label = os.path.basename(path) if isinstance(path, str) else "<stream>"
         with zipfile.ZipFile(path) as z:
-            for info in z.infolist():
-                name = info.filename
-                # Full member path, not the basename: lib/arm64-v8a/libfoo.so and
-                # lib/x86_64/libfoo.so are different files and must not share a label.
-                src = f"{label}:{name}"
-                if name.endswith(".so"):
-                    native.append((name.split("/")[-1], info.file_size, src))
-                    strings += [(s, src, ok) for s, ok in binary_strings(z.read(info))]
-                elif name.endswith(".dex"):
-                    # dex strings come from the string table with an explicit
-                    # terminator, so they are always complete.
-                    strings += [(s, src, True) for s in dex_strings(z.read(info), src)]
-                elif name.endswith((".bundle", ".jsbundle")) or name.endswith("index.android.bundle"):
-                    # React Native keeps its whole app here, the way Flutter keeps
-                    # it in libapp.so. Skipping it meant claiming RN coverage we
-                    # did not have.
-                    strings += [(s, src, ok) for s, ok in binary_strings(z.read(info), 4)]
+            _scan_zip(z, label, native, strings)
     return native, strings
+
+
+def _scan_zip(z, label, native, strings, depth=0):
+    for info in z.infolist():
+        name = info.filename
+        # Full member path, not the basename: lib/arm64-v8a/libfoo.so and
+        # lib/x86_64/libfoo.so are different files and must not share a label.
+        src = f"{label}:{name}"
+        low = name.lower()
+        if name.endswith(".so"):
+            native.append((name.split("/")[-1], info.file_size, src))
+            strings += [(s, src, ok) for s, ok in binary_strings(z.read(info))]
+        elif name.endswith(".dex"):
+            # dex strings come from the string table with an explicit
+            # terminator, so they are always complete.
+            strings += [(s, src, True) for s in dex_strings(z.read(info), src)]
+        elif name.endswith((".bundle", ".jsbundle")) or name.endswith("index.android.bundle"):
+            # React Native keeps its whole app here, the way Flutter keeps
+            # it in libapp.so. Skipping it meant claiming RN coverage we
+            # did not have.
+            strings += [(s, src, ok) for s, ok in binary_strings(z.read(info), 4)]
+        elif low.endswith(WEB_TEXT):
+            # H5 is text, so decode it rather than scanning ASCII runs: a Chinese
+            # keyword in the JS must match. One line is one string; report_api
+            # still only accepts a line that is wholly a path, so nothing is carved.
+            text = z.read(info).decode("utf-8", "replace")
+            strings += [(line, src, True) for line in text.splitlines() if line.strip()]
+        elif low.endswith(".zip"):
+            # Offline H5 packages ship as a zip inside assets. Depth-capped: a
+            # competitor package is untrusted input.
+            data = z.read(info)
+            try:
+                if depth >= 2 or not zipfile.is_zipfile(io.BytesIO(data)):
+                    raise zipfile.BadZipFile("not a readable zip" if depth < 2 else "nested too deep")
+                with zipfile.ZipFile(io.BytesIO(data)) as inner:
+                    _scan_zip(inner, src, native, strings, depth + 1)
+            except (zipfile.BadZipFile, RuntimeError, NotImplementedError) as e:
+                # Encrypted or custom offline packages land here. Say so — this
+                # file is uncovered, not empty.
+                print(f"  ! stopped reading nested archive ({e}): {src}")
 
 
 def report_native(native):
@@ -465,7 +499,12 @@ def main():
 
     want = set(a.section.split(",")) if a.section else set(SECTIONS)
     native, strings = collect(a.apks)
-    print(f"# feature_probe — {len(a.apks)} file(s), {len(strings)} strings, {len(native)} native libs\n")
+    web = {w for _, w, _ in strings if w.lower().endswith(WEB_TEXT)}
+    print(f"# feature_probe — {len(a.apks)} file(s), {len(strings)} strings, {len(native)} native libs, "
+          f"{len(web)} H5 files (.js/.html)\n")
+    if not web:
+        print("  ⚠️  No H5 read. If the feature runs in a WebView, its code was fetched at runtime")
+        print("      or sits in an archive this script cannot open — uncovered, not absent.\n")
 
     if "native" in want:
         report_native(native)

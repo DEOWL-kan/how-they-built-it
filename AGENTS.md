@@ -35,7 +35,9 @@ Three kinds of request arrive, and they want different outputs:
   feature is live, so `[package]` alone never verifies a live feature, and architecture conclusions
   stay inferred even with both tags. Run `scripts/feature_probe.py` over **every APK
   `pm path` returned** — native libs can be in base or ABI splits, feature splits can hold whole
-  modules, and a Flutter app keeps its logic in `libapp.so`, not in dex. Say in the report
+  modules, a Flutter app keeps its logic in `libapp.so`, not in dex, and a hybrid app
+  can keep a whole feature in bundled H5 (`assets/**/*.js`, offline-package zips) — the
+  probe header says how many H5 files it read; zero means uncovered, not absent. Say in the report
   which splits you actually analysed; anything you did not pull is uncovered, not absent. Driving a competitor's app is
   not free either: it can create real data, burn a free quota, and need the user's own
   account. Say so before you start.

@@ -416,6 +416,32 @@ def test_dex_diagnostics_name_the_file_they_came_from():
     assert buf.getvalue() == "", buf.getvalue()
 
 
+def test_bundled_h5_is_read_including_offline_zips():
+    """feature_probe — a Flutter shell's WebView feature lived in assets/*.js and a
+    keyword search over it said "no matches" (pitfall 35)."""
+    inner = io.BytesIO()
+    with zipfile.ZipFile(inner, "w") as z:
+        z.writestr("dist/ask.js", 'fetch("https://ask.h5.test/x");\n/api/v1/ask\n')
+    buf_zip = io.BytesIO()
+    with zipfile.ZipFile(buf_zip, "w") as z:
+        z.writestr("assets/flutter_assets/web/main.js", "const retriever_info = '检索结果';\n")
+        z.writestr("assets/offline/h5.zip", inner.getvalue())
+        z.writestr("assets/offline/sealed.zip", b"PK\x03\x04 not really a zip")
+    buf_zip.seek(0)
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        _, strings = feature_probe.collect([buf_zip])
+    # an archive we could not open is named, not silently treated as empty
+    assert "assets/offline/sealed.zip" in buf.getvalue(), buf.getvalue()
+    out = _capture(feature_probe.report_keyword, strings, ["retriever_info", "检索"])
+    assert "web/main.js" in out and "no matches" not in out, out
+    assert "检索结果" in out, out
+    assert "ask.h5.test" in _capture(feature_probe.report_host, strings)
+    # a line that is wholly a path counts; the nested source is fully named
+    api = _capture(feature_probe.report_api, strings)
+    assert "/api/v1/ask" in api and "h5.zip:dist/ask.js" in api, api
+
+
 def test_report_native_states_bundled_not_running():
     """feature_probe — shipping a runtime is a [package] fact, not a [device] one."""
     out = _capture(feature_probe.report_native,
@@ -645,6 +671,31 @@ def test_declared_and_average_frame_rates_are_both_reported():
     assert frame_diff.source_rates({}) == (None, None)
     # the removed heuristic must not come back
     assert not hasattr(frame_diff, "divisor_advice"), "divisor_advice was removed (pitfall 30)"
+
+
+def test_timeline_is_source_pts_not_counted_from_zero():
+    """pitfall 36 — a clip whose first frame sits at pts 1.0 put frame_diff's
+    timeline 1.00s off ffmpeg's scene timestamps. Skips without ffmpeg."""
+    import shutil
+    import subprocess
+    import tempfile
+    if not shutil.which("ffmpeg"):
+        print("      (skipped: no ffmpeg)")
+        return
+    with tempfile.TemporaryDirectory() as root:
+        clip = os.path.join(root, "off.mp4")
+        # black 1s, fade to white over 0.5s, hold; shifted so the first frame is at
+        # pts 1.0. (A one-frame cut is absorbed by min_run — it needs a real move.)
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                        "color=white:s=64x64:r=10:d=2,fade=in:st=1:d=0.5",
+                        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                        "-output_ts_offset", "1.0", clip], check=True)
+        out = subprocess.run([sys.executable, os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), "frame_diff.py"), clip, "--no-plot", "--fps", "10"],
+            capture_output=True, text=True, check=True).stdout
+    assert "first frame at pts 1.000s" in out, out
+    move = re.search(r"move\s+([\d.]+) ->", out)
+    assert move and abs(float(move.group(1)) - 2.0) < 0.15, out
 
 
 def test_nb_frames_is_not_frame_count():
