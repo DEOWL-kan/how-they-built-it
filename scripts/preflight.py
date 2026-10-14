@@ -34,7 +34,7 @@ def main():
     mode.add_argument("--android-static", action="store_true", help="Check optional static tools without a device")
     args = parser.parse_args()
     if args.android_static:
-        for tool in ("apkanalyzer", "jadx", "java"):
+        for tool in ("apkanalyzer", "jadx", "java", "rea"):
             print("{}: {}".format(tool, shutil.which(tool) or "unavailable (optional)"))
         print("Core ZIP inventory remains available; no device was contacted.")
         return 0
