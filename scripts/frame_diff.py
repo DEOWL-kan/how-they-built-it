@@ -263,19 +263,22 @@ def main():
         print( "  (screenrecord emits a frame only when the screen changes — this is")
         print( "   information about the recording, not an error)")
 
-    # The fps filter's first sample is the first frame, which need not be at 0.
-    # Counting from 0 put a whole-file offset between this timeline and every
-    # other tool's (ffmpeg scene/showinfo, players) — measured 1.00s on a clip
-    # whose first frame sat at pts 1.0. Report source PTS, like they do.
+    # Times count from the first frame, which is what ffmpeg's own timeline does
+    # (-ss, select, showinfo/scene pts_time) — measured on a clip whose first
+    # frame sits at raw pts 1.0: all of those put the change at 3.00, as this
+    # does. Only ffprobe's raw frame pts said 4.00. An earlier "fix" switched to
+    # raw pts and broke the agreement it claimed to create (pitfall 36). Print
+    # the offset so a raw-pts reader can reconcile, never apply it.
     start = start_pts(info)
     if start:
-        print(f"  first frame at pts {start:.3f}s — times below are source PTS, not from 0")
+        print(f"  raw stream start_time {start:.3f}s — times below count from the first frame,")
+        print( "  like ffmpeg -ss / select / showinfo; ffprobe's raw frame pts are that much later")
     n = sw * sh
     diffs = []
     for i in range(1, len(frames)):
         prev, cur = frames[i - 1], frames[i]
         s = sum(abs(cur[j] - prev[j]) for j in range(n)) / n
-        diffs.append((start + i / a.fps, s))
+        diffs.append((i / a.fps, s))
     if not diffs:
         sys.exit("not enough frames sampled")
 

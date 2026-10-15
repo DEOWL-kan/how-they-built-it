@@ -155,6 +155,7 @@ adb shell screenrecord --time-limit 60 /sdcard/feat.mp4
 adb pull /sdcard/feat.mp4 . && adb shell rm /sdcard/feat.mp4
 # 4) 收工
 kill $LOGPID
+# ⭐ 每做一步就记下「第几秒、做了什么、出现了什么」，后面写 steps.json 用（见 C.4 操作路径）
 # 5) 目标页面上单独试一次 dump（见上方，⛔ 别假设读不读得到）
 adb shell uiautomator dump /sdcard/ui.xml
 ```
@@ -224,6 +225,12 @@ python3 scripts/feature_probe.py base.apk split_config.arm64_v8a.apk \
 ## 需求分析
 （解决什么问题 / 给谁 / 什么场景 / 判断做得好的标准——⛔ C.1 没问清楚别写这节）
 
+## 操作路径
+（walkthrough.py 生成的 walkthrough.md 贴在这里；walkthrough.html 一起交付，能直接播放片段）
+1. **点开录音详情右上角「Ask」** → 底部弹出 Ask 面板
+   `[device]` 截图：rec.mp4 @ 00:02.4 ![步骤 1](step01.png) [录屏 00:01.5–00:04.0](rec.mp4#t=1.5,4.0)
+2. **输入问题并发送** → 答案逐字流出 …
+
 ## 功能分析
 （按 C.2 的清单逐项写，每条带标签）
 - 入口：`[真机]` 录音详情页右上角菜单，第二项
@@ -249,6 +256,25 @@ PASS 实测 / PLAUSIBLE 推断 / SKIP 未验
   ⛔ 标签齐全不等于证据支撑得住这句话
 - ⭐ 未取得的 split、没走到的状态、没验的路径，逐条写进 SKIP，⛔ 不许省略
 ```
+
+### 操作路径怎么做
+
+每个功能报告都要有它：读的人照着 1、2、3、4 就能自己复现，不用在脑子里回放一段文字。
+
+1. **录的时候记时间。** 每做一步，记下大致在录屏的第几秒、做了什么、出现了什么。
+   需要定格的画面可以另外截图：`adb exec-out screencap -p > step2.png`。
+2. **写 `steps.json`**（格式见 `scripts/walkthrough.py` 开头）：每步写 `action`；图片二选一，`at`（录屏第几秒）或 `image`（截图文件）；
+   有过程可看的再加 `clip: [开始, 结束]`。时间从录屏的第一帧算起，和 ffmpeg、`frame_diff.py` 的算法一致。
+3. **生成**：`python3 scripts/walkthrough.py steps.json --out <仓库外目录>`，得到 `walkthrough.html`（浏览器打开即可播放片段）
+   和 `walkthrough.md`（贴进报告）。
+4. **逐张核对截图。** 手记的秒数常有半秒到一秒的误差；截图和步骤对不上，就改 `at` 重新生成。
+   可以用 `frame_diff.py` 的分段结果来精确定位转场。
+
+- ⛔ 截帧不要用 `ffmpeg -ss T -frames:v 1`：变帧率录屏里画面静止时没有帧，这个命令会给出 **T 之后**的下一次变化。
+  `walkthrough.py` 取的是 T 时刻（含）之前的最后一帧（pitfalls 第 36 条）。
+- ⚠️ `screenrecord` 单次录制有上限（常见为 180 秒，以设备上 `adb shell screenrecord --help` 为准）；流程更长就拆成几段各出一份，或改用 `image` 截图。
+- ⛔ 截图和录屏都是竞品内容：只用于分析，标「竞品分析用」，放仓库外。`walkthrough.py` 拒绝往本仓库里写。
+- ⚠️ 截图会拍到账号名、录音标题等个人数据，交付前检查一遍，必要时打码。
 
 ## 深入到安装包与代码
 
