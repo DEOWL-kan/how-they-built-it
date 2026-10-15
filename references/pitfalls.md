@@ -720,21 +720,26 @@ API 段仍只收整行即路径的字符串，⛔ 不从 JS 长行里抠路径�
 **判据**：报告写清 H5 覆盖了几个文件；运行时下发的 H5、加密或自定义格式的离线包仍读不到，⛔ 不能写成「没有」。
 ⇒ 回归样本：`test_bundled_h5_is_read_including_offline_zips`（删掉 H5 分支、删掉 zip 分支各自令其失败）。
 
-## 36. frame_diff 的时间轴从 0 数，ffmpeg 和播放器用源 PTS
+## 36. 时间轴：我把 ffprobe 的原始 PTS 当成了 ffmpeg 的时间轴，「修」反了
 
 **发生了什么**（2026-10 实跑）：`screenrecord` 录的变帧率片子，`frame_diff.py` 量出的时间轴与
 ffmpeg scene 时间戳对不上，最后改用 scene 时间戳来量。
 
-**能确认的部分**（自制样本）：变帧率本身不会让时间轴错——首帧在 0、中间停 3 秒无帧的片子，
-运动段仍报在 3.00s。但**首帧 PTS 不为 0** 时，旧版从第一个采样点按 `i/fps` 从 0 数，
-与 ffmpeg/播放器的源 PTS 整体差一个首帧偏移（样本中 1.00s）。现在按 `start_time + i/fps` 报源 PTS，并打印首帧位置。
+**第一次归因是错的。** 自制一个首帧原始 PTS 为 1.0 的片子，`ffprobe -show_entries frame=pts_time` 显示变化在 4.00，
+旧 `frame_diff.py` 报 3.00，于是判定 frame_diff 差了一个首帧偏移，改成按原始 PTS 报 4.00（PR #8）。
+之后在同一片子上复核 ffmpeg 自己：`select`/`showinfo`（scene 用的就是它）报 `pts_time:3`，`-ss`、`select='lte(t,T)'`
+也都从首帧算起。**旧版本来就和 ffmpeg 一致，那次「修复」反而造出了 1.00s 的差。** 已撤回，
+现在只打印原始 `start_time` 供对照，不叠加。
 
-⚠️ **那次实跑的片子不在手上，没有确认它的首帧偏移是不是这次差异的原因。** 若修复后仍对不上，
-带原片复现再定因，⛔ 别把这条当成已解释（第 30 条）。
+**那次实跑的差异仍然没有解释。** 片子不在手上。同期另测到一个候选（不是已证实原因）：
+变帧率片子里画面静止时没有帧，`ffmpeg -ss T -frames:v 1` 会丢掉 T 之前的帧、给出 **T 之后的下一次变化**，
+同一片子 `-ss 2.9` 拿到的是 3.00 才出现的白帧。拿 `-ss` 抽帧去核对时间轴，会看到「对不上」。
 
-**判据**：同一片子，frame_diff 的段边界与 `ffmpeg -vf "select='gt(scene,0.1)',showinfo"` 的 `pts_time`
-应在一个采样间隔内吻合；对不上就以 scene 时间戳为准并记录差异。
-⇒ 回归样本：`test_timeline_is_source_pts_not_counted_from_zero`（需 ffmpeg；去掉 `start +` 令其失败）。
+**判据**：
+- ⭐ 比时间之前先确认两边是**同一种时间**：ffmpeg 滤镜和 `-ss` 从首帧算；`ffprobe` 的 frame `pts_time` 是原始值。
+- ⭐ 要「T 时刻屏幕上是什么」，用 `select='lte(t,T)'` 取最后一帧，⛔ 不用 `-ss T -frames:v 1`。
+- ⛔ 又一次在只验了一边的情况下就下了因果结论（第 30 条）。复核要包括「我拿来当真值的那个工具」。
+⇒ 回归样本：`test_timeline_matches_ffmpeg_not_raw_pts`（重新叠加原始偏移令其失败）。
 
 ## 37. 「开了飞行模式」不等于离线
 

@@ -673,9 +673,10 @@ def test_declared_and_average_frame_rates_are_both_reported():
     assert not hasattr(frame_diff, "divisor_advice"), "divisor_advice was removed (pitfall 30)"
 
 
-def test_timeline_is_source_pts_not_counted_from_zero():
-    """pitfall 36 — a clip whose first frame sits at pts 1.0 put frame_diff's
-    timeline 1.00s off ffmpeg's scene timestamps. Skips without ffmpeg."""
+def test_timeline_matches_ffmpeg_not_raw_pts():
+    """pitfall 36 — ffmpeg's -ss/select/showinfo count from the first frame; only
+    ffprobe's raw pts do not. A "fix" to raw pts put frame_diff 1.00s off ffmpeg's
+    scene timestamps. Skips without ffmpeg."""
     import shutil
     import subprocess
     import tempfile
@@ -693,9 +694,56 @@ def test_timeline_is_source_pts_not_counted_from_zero():
         out = subprocess.run([sys.executable, os.path.join(os.path.dirname(
             os.path.abspath(__file__)), "frame_diff.py"), clip, "--no-plot", "--fps", "10"],
             capture_output=True, text=True, check=True).stdout
-    assert "first frame at pts 1.000s" in out, out
+    assert "raw stream start_time 1.000s" in out, out
     move = re.search(r"move\s+([\d.]+) ->", out)
-    assert move and abs(float(move.group(1)) - 2.0) < 0.15, out
+    assert move and abs(float(move.group(1)) - 1.0) < 0.15, out
+
+
+def test_walkthrough_steps_have_pictures_and_the_right_frame():
+    """walkthrough — numbered steps, a picture each, and the frame that was ON
+    screen at `at`: `-ss T -frames:v 1` returned the next change on a VFR clip
+    (pitfall 36). Skips without ffmpeg."""
+    import json
+    import shutil
+    import subprocess
+    import tempfile
+    import walkthrough
+    # every step needs a picture; clips need a video
+    errs = walkthrough.check({"steps": [{"action": "tap"}, {"action": "x", "image": "a.png", "clip": [1, 2]}]})
+    assert any("step 1" in e and "picture" in e for e in errs), errs
+    assert any("step 2" in e and "video" in e for e in errs), errs
+    # competitor screens must not be written into the repo
+    try:
+        walkthrough.build(os.path.join(walkthrough.REPO, "nope.json"), os.path.join(walkthrough.REPO, "out"))
+        raise AssertionError("wrote inside the repo")
+    except SystemExit as e:
+        assert "inside the repo" in str(e), e
+    if not shutil.which("ffmpeg"):
+        print("      (skipped: no ffmpeg)")
+        return
+    with tempfile.TemporaryDirectory() as root:
+        # VFR: one black frame held 3s, then white — no frames in between
+        for name, colour in (("a.png", "black"), ("b.png", "white")):
+            subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                            f"color={colour}:s=64x64", "-frames:v", "1", os.path.join(root, name)], check=True)
+        with open(os.path.join(root, "l.txt"), "w") as f:
+            f.write("file a.png\nduration 3\nfile b.png\nduration 1\nfile b.png\n")
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "concat", "-i", os.path.join(root, "l.txt"),
+                        "-fps_mode", "vfr", "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                        os.path.join(root, "rec.mp4")], check=True)
+        with open(os.path.join(root, "steps.json"), "w") as f:
+            json.dump({"title": "Ask <flow>", "video": "rec.mp4", "steps": [
+                {"action": "Open <Ask>", "result": "panel", "at": 2.9, "clip": [2.5, 3.5], "evidence": "e3"},
+                {"action": "Send", "image": "b.png"}]}, f)
+        out = walkthrough.build(os.path.join(root, "steps.json"), os.path.join(root, "out"))
+        page = open(os.path.join(out, "walkthrough.html"), encoding="utf-8").read()
+        md = open(os.path.join(out, "walkthrough.md"), encoding="utf-8").read()
+        assert page.count("<li>") == 2 and "&lt;Ask&gt;" in page and "<Ask>" not in page, page
+        assert 'src="rec.mp4#t=2.5,3.5"' in page, page
+        assert "1. **Open <Ask>**" in md and "2. **Send**" in md and "![步骤 1](step01.png)" in md, md
+        pix = subprocess.run(["ffmpeg", "-loglevel", "error", "-i", os.path.join(out, "step01.png"),
+                              "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True, check=True).stdout
+        assert pix and max(pix) < 40, "step 1 at 2.9s must be the black frame still on screen"
 
 
 def test_nb_frames_is_not_frame_count():

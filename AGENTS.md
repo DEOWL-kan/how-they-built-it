@@ -24,7 +24,9 @@ Three kinds of request arrive, and they want different outputs:
 - **"Tear this down"** — the user has named a product or screen they admire. Output is a
   spec for that one screen (mechanism, measured values, what to borrow, what not to).
 - **"Research this feature"** — the user is about to build something and wants to know how
-  shipping products do it. Output is a requirements analysis, a feature breakdown (entry
+  shipping products do it. Output is a requirements analysis, a numbered walkthrough
+  (1, 2, 3, 4 — each step with a screenshot and, where it moves, a recording clip; build it
+  with `scripts/walkthrough.py`), a feature breakdown (entry
   points, states, limits, failure handling) and optionally a technical one (on-device vs
   cloud, third-party stack, what the API surface implies). **Every claim carries an evidence
   tag**: `[device]` you watched it happen on a device, `[browser]` observed in a browser,
