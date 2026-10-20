@@ -127,8 +127,11 @@ Web snapshot and network capture are separate: `scripts/web_probe.js` reads reso
 
 ## Explicit non-goals
 
-- **iOS.** There is no adb for iPhone, so the whole device-to-package chain is missing
-  and the asset inventory — the most decisive step — cannot run. Recording and
-  screenshot analysis still work; package composition does not. Say so rather than
-  guessing.
+- **iOS beyond what a Mac can read.** There is no adb for iPhone and no IPA without the
+  user's store account. The one legitimate package route is an iPhone app the user
+  installed on an Apple Silicon Mac (`references/ios.md`, `scripts/ios_bundle.py`):
+  plain resources, plists, privacy manifests and frameworks, never the FairPlay range
+  and never `Wrapper/iTunesMetadata.plist`. Apps not offered on the Mac, paid apps and
+  everything device-side (UI tree, network) stay out of reach or unverified — say so
+  rather than guessing.
 - Merging split APKs, scraping stores, or anything that downloads on its own.

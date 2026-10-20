@@ -2,14 +2,16 @@
 
 # how-they-built-it
 
-**You saw a screen you liked. This measures how it was actually built,
-and hands you numbers you can build from.**
+**You saw a screen or a feature you liked. This measures how it was actually built,
+and hands you numbers and evidence you can build from.**
 
-A [Claude Code](https://claude.com/claude-code) skill — and an
-[agents.md](https://agents.md) workflow for Codex, Cursor, Windsurf, Gemini CLI
-and the rest. The scripts are plain Python, so it also works with no agent at all.
+Claude Code and Codex plugin · `AGENTS.md` for any other agent · plain-Python scripts
 
-[中文说明](README.zh-CN.md) · Android + web · MIT
+[中文说明](README.zh-CN.md) · Android · iOS (via an Apple Silicon Mac) · Web
+
+![license](https://img.shields.io/badge/license-MIT-blue)
+![version](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FDEOWL-kan%2Fhow-they-built-it%2Fmain%2F.claude-plugin%2Fplugin.json&query=%24.version&label=version)
+![python](https://img.shields.io/badge/python-3.8%2B%20stdlib%20only-informational)
 
 </div>
 
@@ -17,296 +19,263 @@ and the rest. The scripts are plain Python, so it also works with no agent at al
 
 ## Why not just look at it?
 
-Looking gets you "it uses a big photo and soft light" — which nobody can build
-from, and which is **usually wrong**. A 2.7-second eased crossfade reads to the
-human eye as *"changes every 2.5 seconds with a 0.6-second fade."* That is a 4×
-error, and it went into a design document before anyone measured it.
+Looking gets you "it uses a big photo and soft light": nobody can build from that, and
+it is **usually wrong**. A 2.7-second eased crossfade reads to the eye as "changes every
+2.5 seconds with a 0.6-second fade", a 4× error that reached a design doc before anyone
+measured it.
 
 | You want to know | How it gets answered |
 |---|---|
-| Is that background a video, a Lottie, or five JPEGs? | The app package's asset inventory |
+| Is that background a video, a Lottie, or five JPEGs? | The package's asset inventory (APK, or an iPhone app on a Mac) |
 | How long is that transition, and what curve? | Per-frame difference over a screen recording |
-| Does that gradient have grain, or can I just draw it in CSS? | Neighbour-pixel delta statistics |
-| Where is the light actually centred? | Chroma peak on a downsampled grid |
-| Will my text still pass contrast on it? | Minimum contrast across decoded RGB pixels |
-| On-device or cloud? Which SDKs did they buy? | Native libs, hosts and API paths in the package |
+| Grain, or can I draw that gradient in CSS? | Neighbour-pixel statistics |
+| Will my text pass contrast on it? | Minimum contrast over every decoded pixel |
+| On-device or cloud? Which SDKs did they buy? | Native libraries, Dart packages, hosts and API paths in the package |
+| What exactly happens when I tap it? | A numbered walkthrough, one screenshot and clip per step |
 
-Anything that cannot be measured is labelled as inference. **That distinction is
-the whole point.**
-
-## What it looks like
-
-Point it at a package and ask what a screen is made of:
-
-<img src="docs/apk-assets.svg" alt="apk_assets.py output: five bg_loop JPEGs under login, concluding the background is a crossfade not a video, plus a warning that onboarding and login assets are different screens" width="100%">
-
-That background had been assumed to be video. Five JPEGs and a crossfade,
-about 1.2 MB — which changes the entire production plan. The shouting block at
-the bottom is the mistake this tool exists to prevent: an `onboarding_*.mp4`
-attributed to the login screen, which happened twice before the check existed.
-
-Then measure the rhythm — and notice what the tool does when it *cannot* answer:
-
-<img src="docs/frame-diff.svg" alt="frame_diff.py output: at the default sampling rate it reports NOT A LOOP with a warning that the rate is wrong for this source; re-run at the suggested rate and it recovers the true 4.2s cycle" width="100%">
-
-Same clip, twice. At the default sampling rate it reports `NOT A LOOP` — and
-says, on that same line, that its own sampling rate is wrong for this source.
-Re-run as instructed and the real 4.2-second cycle comes back. **A measurement
-tool that cannot say "don't believe this one" is worse than no tool.**
-
-And how the image itself was made:
-
-<img src="docs/image-probe.svg" alt="image_probe.py output: flat gradient with no grain, light source located, and white text failing WCAG contrast over the bright region" width="100%">
-
-Flat gradient, no grain — so you can draw it in CSS instead of shipping an
-asset. But white text passes over the dark part (12.40) and **fails over the
-glow (2.73)**, which you would not have found by looking.
-
-> Every figure above is real output. The inputs are synthetic fixtures generated
-> for the README — a fake APK, a clip built with a known 2.7s crossfade, an image
-> with the light placed at a known point — so the answers can be checked against
-> a ground truth, and so no competitor's pixels are in this repository.
-> Regenerate with `./tools/make_figures.sh`.
-
-## What you actually say to it
-
-You do not learn a command set. You say what you want; it hears one of three
-entry points.
-
-| You say | It does |
-|---|---|
-| "analyse how XYZ builds their login screen" · "is that background a video?" · "how long is that transition?" | **Tears down one screen** → mechanism + numbers you can build from |
-| "I'm designing an empty state and I'm stuck" · "how do the good onboarding flows do it?" | **Finds three references** (web *and* app) → what each does, where they agree, where they diverge, which route fits you |
-| "we want to build auto-chaptering — research how others do it" · "is their transcription on-device or cloud?" | **Researches one feature** → requirements, feature breakdown, technical breakdown |
-
-It asks before it downloads a package, drives someone's app, or writes data anywhere.
+Anything that cannot be measured is labelled as inference. **That distinction is the point.**
 
 ## Install
 
-**Claude Code (plugin, recommended)**:
+**Claude Code**
 
 ```bash
 claude plugin marketplace add DEOWL-kan/how-they-built-it
 claude plugin install how-they-built-it@deowl-kan
 ```
 
-**Codex (plugin)**:
+**Codex**
 
 ```bash
 codex plugin marketplace add DEOWL-kan/how-they-built-it
 codex plugin add how-they-built-it@deowl-kan
 ```
 
-Start a new session afterwards. `/plugin` (Claude Code) and `/plugins` (Codex) browse the same.
+Start a new session afterwards. **Other agents** (Cursor, Windsurf, Gemini CLI, opencode,
+Amp…): clone the repo and tell the agent to read `AGENTS.md`. **No agent**: every script
+takes `--help`.
 
-**By hand (clone + symlink, if you want to change the code)**:
+Requirements: Python 3.8+ (standard library only) and `ffmpeg`/`ffprobe`; `adb` for
+Android devices. Nothing to `pip install`. `python3 scripts/preflight.py` says what is missing.
+
+<details>
+<summary>By hand (clone + symlink, for changing the code)</summary>
 
 ```bash
 git clone https://github.com/DEOWL-kan/how-they-built-it.git
-```
-
-**Claude Code** — symlink it as a skill, then just ask:
-
-```bash
 ln -s "$PWD/how-they-built-it" ~/.claude/skills/how-they-built-it
 ```
 
-> analyse how XYZ builds their login screen — ours feels cheap next to it
+Use either the plugin or the symlink, not both: you would get two copies of the skill.
+</details>
 
-**Codex, Cursor, Windsurf, Gemini CLI, opencode, Amp** and anything else that
-follows the [agents.md](https://agents.md) convention — `AGENTS.md` at the repo
-root is the entry point, authorization gates included:
+## Use it
 
-> read AGENTS.md in ./how-they-built-it, then tear down XYZ's onboarding
+You don't learn commands. Say what you want; it hears one of three entry points.
 
-**No agent at all** — every script takes `--help`, and `SKILL.md` is the workflow
-in full.
-
-Requirements: Python 3.8+ (standard library only), `ffmpeg`/`ffprobe` on PATH,
-plus `adb` for Android devices. Nothing to `pip install`.
-
-### Updating
-
-What changed is in [`CHANGELOG.md`](CHANGELOG.md). Every release bumps `version` in
-`.claude-plugin/plugin.json`; plugin installs compare that number.
-
-| Installed as | Update with |
+| You say | You get |
 |---|---|
-| Claude Code plugin | `claude plugin marketplace update deowl-kan`, then `claude plugin update how-they-built-it@deowl-kan` — or turn on auto-update in `/plugin` |
-| Codex plugin | `codex plugin marketplace upgrade deowl-kan` |
+| "how does XYZ build their login screen?" · "is that background a video?" | **One screen torn down**: mechanism and buildable numbers |
+| "I'm designing an empty state and I'm stuck" | **Three references** (web *and* app): what each does, where they agree and diverge, which fits you |
+| "we want auto-chaptering, research how others do it" · "is their transcription on-device?" | **One feature researched**: requirements, numbered walkthrough, feature and technical breakdown |
 
-Start a new session afterwards.
+A prompt to paste:
 
-**By hand**: the symlink points at your clone, so updating is a pull — on **`main`**:
+> Research how XYZ implements voice notes: show the steps with screenshots, tag every claim with its evidence, and tell me what we can build.
+
+It asks before downloading a package, before driving someone's app (that creates real
+data and can burn a free quota) and before extracting assets.
+
+## What you get
+
+Every claim carries its evidence, and the report ends with what was proven, what is only
+plausible, and what was not checked. From [a real web case](examples/web/wikipedia-case.md):
+
+| Claim | Result |
+|---|---|
+| Input size, and suggestions show and hide as typed | PASS (stated conditions) |
+| The shipped script declares a 100 ms debounce | PASS (static scope) |
+| The observed flow matches the full client chain | PLAUSIBLE (response-to-UI mapping gap) |
+| Real debounce latency, caching, failures, server side | SKIP |
+
+And measured answers for a screen. Asked what a login screen is made of:
+
+<img src="docs/apk-assets.svg" alt="apk_assets.py output: five bg_loop JPEGs under login, concluding the background is a crossfade not a video, plus a warning that onboarding and login assets are different screens" width="100%">
+
+It had been assumed to be video. It is five JPEGs and a crossfade, about 1.2 MB, which
+changes the production plan. The warning at the bottom is a mistake that happened twice:
+an `onboarding_*.mp4` credited to the login screen.
+
+<details>
+<summary>Motion rhythm and pixel analysis</summary>
+
+<img src="docs/frame-diff.svg" alt="frame_diff.py output: variable frame rate reported, isolated duplicate samples flagged, cycle 4.13s against a known 4.20s" width="100%">
+
+Cycle 4.13 s against a known 4.20 s. It also reports what it cannot fix: the recording is
+variable-rate, and 0.7% of samples look like duplicated frames, below the level that
+distorts segmentation.
+
+<img src="docs/image-probe.svg" alt="image_probe.py output: flat gradient with no grain, light source located, and white text failing WCAG contrast over the bright region" width="100%">
+
+Flat gradient, no grain, so CSS will do. White text passes over the dark part (12.40)
+and **fails over the glow (2.73)**.
+
+</details>
+
+> All figures are real output on synthetic inputs with known answers, so they can be checked
+> and the repo holds no competitor pixels. Rebuild them with `./tools/make_figures.sh`.
+
+## Evidence rules
+
+| Tag | Means |
+|---|---|
+| `[device]` | Watched it happen on a device. Cite the recording and time |
+| `[browser]` | Observed in a browser, page or network |
+| `[package]` | Traced to a named file. Proves those *bytes shipped*, never that the feature is live |
+| `[public-source]` | An official statement, with URL and date |
+| `[user-report]` | Someone's statement, with author, URL and date; not reproduced here |
+| `[inferred]` | The evidence does not carry the claim, even when several tags are present |
+
+Results are **PASS** (verified), **PLAUSIBLE** (inferred) or **SKIP** (not checked).
+Architecture conclusions ("their transcription runs in the cloud") stay PLAUSIBLE even
+with two tags: "no on-device library" plus "fails in airplane mode" does not rule out local
+inference gated behind a login check. Research targets a depth, L1–L5, and records what it
+actually reached.
 
 ```bash
-git -C /path/to/how-they-built-it switch main
-git -C /path/to/how-they-built-it pull --ff-only
+python3 scripts/check_report.py report.json                          # claims vs. evidence
+python3 scripts/check_report.py report.json --walkthrough steps.json  # each step's evidence
 ```
 
-Start a new agent session afterwards so it reads the new `SKILL.md`. ⚠️ A clone left on a feature branch silently
-stays old — that happened to the author's own install (7 merges behind). Check with
-`git -C /path/to/how-they-built-it status -sb`.
+The checker rejects an inference marked PASS or a static-only runtime PASS. It checks
+structure and references, not truth.
 
-Triggering is measured, not hoped for: **35/36** on the 36-query tuning set in
-`evals/`, **10/12** held out. "their paywall looks expensive, ours doesn't" and
-"is that background a video?" reach it; "design me a login page" deliberately
-does not. ⚠️ The held-out set has since been used to fix one missing phrasing
-category, so it is no longer independent *for that category* — `ROADMAP.md` says
-which, and the next round needs fresh queries.
-
-## Reading the output honestly
-
-Findings carry an evidence tag, and the tags are not decoration:
-
-- **`[device]`** — you watched it happen; cite the recording timestamp
-- **`[package]`** — traced to a named file. Proves those *bytes shipped*, never
-  that the feature is live, reachable, or on for every user
-- **`[inferred]`** — the evidence does not carry the claim, **including when you
-  have both other tags but they only support something weaker**
-
-⭐ Architecture conclusions ("their transcription runs in the cloud") stay
-`[inferred]` even with both other tags. "No on-device inference library" plus
-"fails in airplane mode" still does not rule out local inference gated behind a
-login check. Fifteen rounds of adversarial review went into that one line.
-
-## Doing it by hand
-
-Every step is a script you can run yourself:
+## By hand
 
 ```bash
-python3 scripts/preflight.py                    # what's missing before you start
+# Android
+adb shell pm path com.example.app && adb pull <each path> .
+python3 scripts/apk_assets.py base.apk --screen login          # what a SCREEN is made of
+python3 scripts/feature_probe.py *.apk --keyword transcri       # what a FEATURE is made of
+python3 scripts/feature_probe.py *.apk --section dart           # Flutter: every Dart package
 
-adb shell pm path com.example.app               # already installed = zero download
-adb pull <each path> .
+# iOS: an iPhone app the user installed on an Apple Silicon Mac
+python3 scripts/ios_bundle.py "/Applications/XYZ.app"
+python3 scripts/feature_probe.py "/Applications/XYZ.app" --keyword transcri
 
-python3 scripts/apk_assets.py base.apk --screen login        # what is this SCREEN made of
-python3 scripts/feature_probe.py *.apk --keyword transcri    # what is this FEATURE made of
-python3 scripts/feature_probe.py *.apk --keyword ble --whole-word  # optional word boundaries
-                                                             # pass every APK returned by pm path
-
-adb shell am force-stop com.example.app                      # record cold, recorder first
-adb shell screenrecord --time-limit 20 /sdcard/rec.mp4 && adb pull /sdcard/rec.mp4 .
-
-python3 scripts/frame_diff.py rec.mp4 --suggest-crop         # where is the motion?
+# Motion, pixels, walkthrough
+python3 scripts/frame_diff.py rec.mp4 --suggest-crop
 python3 scripts/image_probe.py bg.png --grid 9x20 --contrast '#1E2C28'
+python3 scripts/walkthrough.py steps.json --out /tmp/walkthrough
 ```
 
-| Script | Question it settles |
+| Script | Settles |
 |---|---|
-| `preflight.py` | What is missing (ffmpeg / adb / device), with the install command |
-| `apk_assets.py` | Video, Lottie, or five JPEGs? Which screen owns each asset? |
-| `feature_probe.py` | On-device or cloud? Which SDKs did they buy instead of build? |
-| `frame_diff.py` | How long, what easing, does it loop, which region is even moving? |
-| `image_probe.py` | Grain or pure gradient? Where is the light? What is the minimum pixel contrast? |
-| `test_regressions.py` | One sample per bug this toolkit has ever had — run it after any change |
+| `preflight.py` | What is missing (ffmpeg, adb, device, optional tools), with install hints |
+| `apk_assets.py` | Video, Lottie or five JPEGs? Which screen owns each asset? |
+| `apk_profile.py` | Package and split inventory, manifest declarations (optional apkanalyzer) |
+| `feature_probe.py` | Native libs, SDKs, Dart packages, hosts, API paths, keywords; APK, bundled H5, or iOS `.app` |
+| `ios_bundle.py` | iOS bundle composition, Info.plist, privacy manifests, frameworks, FairPlay ranges |
+| `frame_diff.py` | How long, which easing, does it loop, where is the motion? |
+| `image_probe.py` | Grain or gradient? Where is the light? Minimum contrast? |
+| `web_probe.js` | A web page's resolved DOM, CSS and animation values |
+| `tools/web-capture` | Live HTTP/WS/SSE capture (optional, Node + Playwright) |
+| `walkthrough.py` | Numbered steps with a screenshot and clip each, as HTML and Markdown |
+| `check_report.py` | Evidence records and walkthroughs against the rules above |
+| `test_regressions.py` | One sample per bug this toolkit has had. Run it after any change |
 
-`references/` holds the rest: `pitfalls.md` (38 numbered entries),
-`feature-research.md` (the feature-research path and its evidence-tag rules),
-`web.md` (web products read their specs in the clear — a much shorter route) and
-`android.md` (device and package commands).
+## Optional: pairing with REA
+
+[REA](https://github.com/morluto/rea) is an agent-facing reverse-engineering tool. This skill
+never installs it; [`references/rea.md`](references/rea.md) says when to hand off. Measured,
+the big gain is **iOS screens built with Interface Builder**: compiled nibs decode into a
+control tree with text, fonts, colours, constraints and action names, which the standard
+library cannot do. Native call tracing (Ghidra) could be the second; it is unverified. For
+Flutter dependency lists our own `--section dart` is more complete (138 packages, against
+REA's 27 on the same app).
+
+## What it can't do
+
+- **iOS** only through an iPhone app the user installed on an Apple Silicon Mac. Apps not offered
+  on the Mac, paid apps, and device-side work (iPhone recording frame rate, UI tree, network) are
+  unverified or out of reach. The Mac copy may be thinned for iPad. See [`references/ios.md`](references/ios.md).
+- **A string is not a feature.** Packages prove bytes shipped, not that a feature is live.
+  API paths come only from whole strings, so concatenated and minified URLs are invisible.
+- **No app network interception.** Pinning, and patching clients, are out of bounds; cloud-or-device
+  stays PLAUSIBLE unless something else proves it.
+- **Timing reads short** on eased transitions (2.16–2.38 s for a known 2.7 s); cycle length is steadier.
+  Resampled recordings duplicate frames, and the tool reports that rather than repairing it.
+- **Contrast wants a background**, not a screenshot; scrims change the shipping values.
+- **"Help me find" has never been run end to end**, and feature research on a real device has one run.
+
+Current status and every known gap: [`ROADMAP.md`](ROADMAP.md).
 
 ## Boundaries
 
-This is for understanding **mechanisms**, so you can build your own thing
-better. It is not for taking anyone's work.
+This is for understanding **mechanisms** so you build your own thing better, not for taking anyone's work.
 
 | | |
 |---|---|
-| Analysing timings, colours, structure, asset types | ✅ |
-| Turning findings into your own specs and rebuilding | ✅ |
+| Analysing timing, colour, structure, asset types | ✅ |
+| Turning findings into your own spec and rebuilding it | ✅ |
 | Screenshots and frames for analysis | ✅ label them |
-| **Downloading a free package from a public source** | ⚠️ **ask first**, then check its version |
-| Signing into the user's store account to fetch one | ⛔ never |
-| Paid apps, region-locked apps | ⛔ never |
+| Downloading a free package from a public source | ⚠️ ask first, then check its version |
+| Reading an iPhone app the user installed on their Mac | ✅ plain files only; never the FairPlay range or purchase metadata |
+| Signing into the user's store account | ⛔ never |
+| Paid or region-locked apps | ⛔ never |
 | Shipping or committing a competitor's assets | ⛔ never |
-| Bypassing paywalls, patching clients, circumventing DRM | ⛔ never — this reads publicly distributed packages only |
+| Bypassing paywalls, patching clients, Frida, circumventing DRM | ⛔ never |
 
-## Why `references/pitfalls.md` is the most useful file here
+## Why trust it
 
-Almost every one of its 38 numbered entries is a mistake that actually happened (the
-exceptions say so in the entry): attributing an onboarding video to a login
-screen — twice; estimating animation timing from 1 fps samples; inferring
-texture from file size; painting a competitor's product details onto your own
-spec sheet.
+- **45 regression samples**, one per bug, each checked to fail with its fix removed: `python3 scripts/test_regressions.py`.
+- **[40 pitfalls](references/pitfalls.md)**, nearly all real mistakes, including the scripts' own. One `ble`
+  substring matched `drawable` and put 1976 of 2886 assets in the wrong bucket. Two entries record
+  fixes of ours that were wrong and were retracted.
+- **Triggering is measured**: 35/36 on the tuning set, 10/12 held out; a second 20-query holdout is
+  drafted and not yet run. Device-free validation: [record](evals/validation-2026-10-08.md).
 
-Entries 9–14 came from turning the scripts loose on apps they had never seen,
-and five of the six are the *scripts* being wrong rather than the analyst — a
-`ble` substring that matched `drawable` and put 1976 of one app's 2886 assets in
-the "device" bucket; a contrast check that scored a headline against its own
-pixels; a "cycle length" reported for a sequence that never repeats. Entry 30
-came from building the figure at the top of this README. Each is now pinned by a
-sample in `scripts/test_regressions.py`.
+## Updating
 
-## Known limitations
+| Installed as | Update with |
+|---|---|
+| Claude Code plugin | `claude plugin marketplace update deowl-kan`, then `claude plugin update how-they-built-it@deowl-kan` (or auto-update in `/plugin`) |
+| Codex plugin | `codex plugin marketplace upgrade deowl-kan` |
+| Clone + symlink | `git -C <clone> switch main && git -C <clone> pull --ff-only` |
 
-Stated plainly, because a teardown tool that overstates its own reach is the
-worst kind.
+Then start a new session. Changes: [`CHANGELOG.md`](CHANGELOG.md). Plugins update when the version changes.
 
-**Android only; iOS is an explicit non-goal.** There is no adb for iPhone, so
-the asset inventory — the step that actually settles "video or five JPEGs" —
-cannot run at all. For iOS-first apps you get motion and pixel analysis and
-nothing else.
+## FAQ
 
-**Rate-converted clips break segmentation.** Duplicated frames read as static
-holds and split one transition into three. `adb shell screenrecord` has no
-`--fps` flag and emits a frame only when the screen changes — measured, 2s of a
-static screen produced a single frame — so resampling one onto a fixed grid
-duplicates frames, as does upsampling. The script reports how many samples carry
-that signature and flags it above 2%; it does not repair the signal, because the
-original frames are gone. Record natively at the rate you want.
+<details><summary>Does it work on iOS?</summary>
 
-**Eased transition durations read short.** Measured against a known 2.7s
-crossfade, the reported duration was 2.16–2.38s; the deficit lands in the
-adjacent static hold. This sample read short; thresholds and short-segment
-merging can also overestimate duration. `cycle length` is steadier —
-it measured 4.13–4.20s against a known 4.20s across every fixture and sampling
-rate — but it is not immune: a recording that starts partway through the first
-hold truncates that segment, and the error does not cancel.
+Partly. If the app is offered on the Mac App Store as an iPhone app, the user installs it and the
+scripts read its bundle. Otherwise you get recording and pixel analysis only. See `references/ios.md`.
+</details>
 
-**Subtle motion needs a higher resolution.** `frame_diff.py` downsamples before
-differencing, so 3px of drift on a 1080px capture is 0.3px at the default and
-gets smoothed away. It warns and tells you to raise `--res`, but it cannot
-detect what it never resolved.
+<details><summary>Do I need a device?</summary>
 
-**Contrast wants a background, not a screenshot.** Feed `image_probe.py
---contrast` the extracted background asset. On a screenshot the darkest
-"background" pixel is the body text itself. And if any scrim sits between text
-and background, none of these numbers are the shipping values. The check uses all
-decoded RGB pixels, independently of `--grid`; it does not evaluate text placement,
-size or transparency. Use an opaque composited crop beneath the intended text.
-The reported minimum is not an accessibility verdict.
+No. Web products, packages and recordings work without one. Runtime claims then stay SKIP.
+</details>
 
-**Split APKs: it depends what you are asking.** For a *visual* teardown
-`base.apk` is normally the whole answer — over 99% of asset weight across six
-shipping apps, not a guarantee. Inspect splits if target assets are missing.
-For a *feature* teardown analyse every APK returned by `pm path`; native libraries
-may live in base or ABI splits, and feature splits can contain whole modules. `feature_probe.py` takes as many packages as you pass
-it; say in the report which splits you actually had.
+<details><summary>Does it download anything or touch my accounts?</summary>
 
-**Screen buckets are a keyword heuristic.** Treat them as a lead, not an
-inventory, and grep the full paths with your own product's vocabulary.
+Never on its own. It asks before downloading a package or driving an app, and never signs into a store account.
+</details>
 
-**Getting from teardown to your own design is still on you.** This produces a
-specification of how someone else did it. Deciding what applies to your product
-— and what should be deliberately different — is judgement the tooling does not
-supply.
+<details><summary>Why is SKILL.md in Chinese?</summary>
+
+It was written that way. `AGENTS.md` carries the same rules in English, and agents read both.
+The references and examples are mostly Chinese.
+</details>
+
+## Docs
+
+[`SKILL.md`](SKILL.md) workflow · [`AGENTS.md`](AGENTS.md) rules for any agent ·
+[`references/`](references/): `pitfalls`, `feature-research`, `research-workflow`, `evidence-format`,
+`android`, `ios`, `web`, `apk-analysis`, `code-tracing`, `rea` ·
+[`examples/`](examples/) (Chinese) · [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`CHANGELOG.md`](CHANGELOG.md)
 
 ## License
 
-MIT — see [LICENSE](LICENSE). Contributions welcome; see [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Research depth and evidence records
-
-Research defaults to L2 (behavior); “how is it implemented?” targets L3 (a traceable execution path). L4 compares explanations and trade-offs; L5 proposes our own implementation. State achieved depth and gaps. See [the workflow](references/research-workflow.md) and [evidence format](references/evidence-format.md).
-
-```sh
-python3 scripts/check_report.py examples/research/report.json
-```
-
-The checker validates structure and evidence references, not factual truth. The bundled example is synthetic. Optional [Web capture](tools/web-capture/README.md) now records live HTTP and attached-target WS/SSE evidence; it requires its separate runtime. Optional [APK profiling](references/apk-analysis.md) and [targeted JADX tracing](references/code-tracing.md) are validated on self-authored packages; device behavior remains unverified. The checker does not itself capture traffic.
-
-
-Examples: [Web screen and feature](examples/web/wikipedia-case.md), [three-reference comparison](examples/comparison/search-brief.md), [synthetic Web flow](examples/web/feature-report.md), [Android static trace](examples/android-fixture/README.md).
-
-Device-free follow-up validation covers Chromium worker/OOPIF streams and decoded JSONP, Firefox/WebKit HTTP/WS and DOM probes, plus actual model routing cases. See the [dated validation record](evals/validation-2026-10-08.md) for results and limits. Physical Android runtime remains unverified.
+MIT, see [LICENSE](LICENSE).

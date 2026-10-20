@@ -97,16 +97,15 @@ App 已经停在那一屏的时候录多久都是静止的 —— 实测录满 1
 设备是共用的时候先看一眼有没有别的会话在用（`adb shell ps -A | grep <pkg>`），
 ⛔ 别把别人正在跑的测试挤掉。
 
-> **拆的是 iOS 产品的话，先把话说在前面：第 3 步（资源清单）做不了。**
-> 非越狱设备拿不到 IPA，而资源清单正是本流程里最决定性的一步 ——
-> 「背景到底是视频还是几张静态图」这个问题在 iOS 上**只能推断，不能实测**。
+> **拆的是 iOS 产品：先问能不能在 Mac 上装。** 非越狱设备拿不到 IPA，但 Apple Silicon Mac 上由用户
+> **自己**从 Mac App Store 装的 iPhone 版 App，整个包就在 `/Applications/X.app/Wrapper/Y.app`，资源、Info.plist、
+> 隐私清单、框架都是明文。这时第 3 步改用 `ios_bundle.py` 和 `feature_probe.py "/Applications/X.app"`，流程与边界见 `references/ios.md`。
 >
-> iOS 上仍然成立的：录屏 → `frame_diff.py`（时长、曲线、节奏），截图 → `image_probe.py`
-> （颗粒、渐变结构、色值、对比度）。也就是**「怎么动」和「什么颜色」能量，「用什么做的」不能**。
-> 输出报告时这一条必须落在三态里记 `SKIP(未验)`，⛔ 不许写成实测。
->
-> ⚠️ `ipatool` 一类的工具需要登录用户自己的 Apple ID 去下载，触及商店账号，
-> 本技能**不替用户操作商店账号**（见下方边界表）。要走这条路请用户自己决定并自己执行。
+> - ⚠️ Mac 上的副本只瘦身成一种设备（实测有 iPad 也有 iPhone），看脚本打印的「thinned for」再决定能不能当 iPhone 版写规格。
+> - ⛔ 不读 `Wrapper/iTunesMetadata.plist`（可能有购买者账号信息）；加密段不读、不解密。
+> - 开发者关掉了 Mac 上架、或是付费 App 时，资源清单这一步仍然做不了：「用什么做的」记 `SKIP(未验)`，
+>   只剩录屏 → `frame_diff.py`、截图 → `image_probe.py`。
+> - ⚠️ `ipatool` 一类的工具需要登录用户的 Apple ID，本技能**不替用户操作商店账号**（见下方边界表）。
 
 > **拆的是网页的话，第 2–4 步换一条路走：网页的样式是明文的，规格可以直接读出来，
 > 不需要从像素反推。** 渐变定义、动效时长与缓动曲线、字阶、design token 全都能一行 JS 取到 ——
@@ -323,6 +322,9 @@ A、B 两档拆的是**一屏长什么样**；C 档拆的是**一个功能怎么
 ## 参考文件
 
 - `references/feature-research.md` — **C 档（功能调研）全流程**：证据标签制度、提问清单、真机调研、包内取证、产出模板。⛔ 走 C 档前必读
-- `references/pitfalls.md` — 踩坑清单（30 条）。**动手前先读**；绝大多数是真实发生过的事故，个别是设计时识别出的风险，条目里会自己说明
+- `references/pitfalls.md` — 踩坑清单（40 条）。**动手前先读**；绝大多数是真实发生过的事故，个别是设计时识别出的风险，条目里会自己说明
 - `references/android.md` — 真机与安装包操作的完整命令、常见报错
 - `references/web.md` — 网页产品的拆解方法（**能直接读明文规格，比 App 简单得多**）
+- `references/ios.md` — iOS：Mac 上的 iPhone App 能读到哪一步、设备侧哪些未验证、边界
+- `references/rea.md` — 可选的 REA 深挖：什么时候交给它、实测能做什么不能做什么
+- `references/evidence-format.md` — 证据记录与 `check_report.py`（含 `--walkthrough` 操作路径核对）

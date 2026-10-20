@@ -269,10 +269,49 @@ def reject_constant(value):
     raise ValueError("non-JSON number: " + value)
 
 
+def validate_walkthrough(report, path):
+    """Each walkthrough step must point at evidence that really is that observation.
+
+    A screenshot in the report next to "[device]" is only as good as the record
+    behind it: the id must exist, be a device/browser observation, and — for a step
+    cut from a recording — cite that same recording, not some other session.
+    """
+    errors = []
+    with open(path, encoding="utf-8") as handle:
+        spec = json.load(handle, object_pairs_hook=unique_object, parse_constant=reject_constant)
+    evidence = {e.get("id"): e for e in report.get("evidence", []) if isinstance(e, dict)}
+    steps = spec.get("steps") if isinstance(spec, dict) else None
+    if not isinstance(steps, list) or not steps:
+        return ["walkthrough.steps: expected a non-empty list"]
+    for number, step in enumerate(steps, 1):
+        where = "walkthrough.steps[{}]".format(number)
+        if not isinstance(step, dict):
+            errors.append(where + ": expected an object")
+            continue
+        ident = step.get("evidence")
+        if not isinstance(ident, str) or not ident.strip():
+            errors.append(where + ".evidence: every step needs the id of the evidence it shows")
+            continue
+        row = evidence.get(ident)
+        if row is None:
+            errors.append(where + ".evidence: no evidence with id " + ident)
+            continue
+        if row.get("source") not in ("device", "browser") or row.get("kind") != "observation":
+            errors.append(where + ".evidence: " + ident + " is not a device/browser observation")
+        video = step.get("video") or spec.get("video")
+        if video and ("at" in step or step.get("clip")):
+            target = str((row.get("locator") or {}).get("target", ""))
+            if os.path.basename(target) != os.path.basename(video):
+                errors.append(where + ".evidence: " + ident + " cites " + repr(target)
+                              + ", but the step is cut from " + repr(video))
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("report")
     parser.add_argument("--capture", help="Cross-check HTTP/CDP/stream links against a capture directory")
+    parser.add_argument("--walkthrough", help="Cross-check a walkthrough.py steps.json against this report's evidence")
     args = parser.parse_args()
     try:
         with open(args.report, "rb") as handle:
@@ -284,6 +323,8 @@ def main():
         errors = validate(report)
         if args.capture and not errors:
             errors.extend(validate_capture(report, args.capture))
+        if args.walkthrough and not errors:
+            errors.extend(validate_walkthrough(report, args.walkthrough))
     except (OSError, ValueError, RecursionError, AttributeError, TypeError) as exc:
         errors = ["report: " + str(exc)]
     if errors:

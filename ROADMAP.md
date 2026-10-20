@@ -1,20 +1,23 @@
 # ROADMAP
 
-## 2026-10-20 现状与不足（以此为准，下面的条目是历史记录）
+## 2026-10-20 现状与不足（1.2.0；以此为准，下面的条目是历史记录）
 
 ### 能做到什么
 
 - **三种用法**：拆这个（单屏规格）、帮我找（三个参考的对比简报）、功能调研（需求 + 操作路径 + 功能 + 技术）。
 - **视觉**：`apk_assets.py` 资源构成；`frame_diff.py` 动效时长、分段、循环、裁剪建议；`image_probe.py` 色彩、渐变、对比度；`web_probe.js` 网页 DOM/CSS/动画。
-- **功能与技术**：`feature_probe.py` 原生库 / SDK / 域名 / API 路径 / 关键词，含随包 H5 与离线包 zip；`apk_profile.py` 包画像；JADX 定向追踪；`tools/web-capture` 网页 HTTP/WS/SSE；真机录屏、logcat、dump；可选 REA。
+- **iOS**：Mac 上用户自装的 iPhone App 可读——`ios_bundle.py` 构成 / Info.plist / 隐私清单 / 框架 / 加密范围；`feature_probe.py` 读 `.app`（加密段置空）。
+- **功能与技术**：`feature_probe.py` 原生库 / SDK / Dart 包完整清单 / 域名 / API 路径 / 关键词，含随包 H5 与离线包 zip；`apk_profile.py` 包画像；JADX 定向追踪；`tools/web-capture` 网页 HTTP/WS/SSE；真机录屏、logcat、dump；可选 REA。
 - **证据纪律**：六种标签、PASS/PLAUSIBLE/SKIP、L1–L5，`check_report.py` 拒绝把推断或纯静态证据记成运行时 PASS；下载和真机操作前先征求授权。
-- **交付**：`walkthrough.py` 生成编号操作步骤，每步截图 + 录屏片段。
-- **质量**：39 个回归样本，每个都验证过去掉修复会失败；pitfalls 38 条。
+- **交付**：`walkthrough.py` 生成编号操作步骤，每步截图 + 录屏片段，支持多段录屏；`check_report.py --walkthrough` 核对每步挂的证据。
+- **质量**：45 个回归样本，每个都验证过去掉修复会失败；pitfalls 40 条。
 
 ### 不足
 
 **平台**
-- [ ] iOS 拆不了包（无 adb），只剩录屏与像素分析；鸿蒙未覆盖。
+- [x] iOS 包：Mac 上用户自装的 iPhone App 可读（`references/ios.md`）。
+- [ ] iOS：不在 Mac 上架的 App、付费 App 仍拿不到包；设备侧（QuickTime 录屏的帧率、XCUITest 无障碍树、rvictl 抓包）全部未实测；Mac 副本的瘦身目标可能是 iPad。
+- [ ] 鸿蒙未覆盖。
 
 **测量精度**
 - [ ] 缓动转场时长读数偏短（已知 2.7s 读出 2.16–2.38s）。
@@ -25,7 +28,8 @@
 **静态分析的天花板**
 - [ ] 字符串不等于功能；API 路径只认整串，压缩 JS 与拼接 URL 看不到（REA 同样看不到拼接 URL）。
 - [ ] 运行时下发的 H5、加密或自定义格式的离线包读不到。
-- [ ] Flutter `libapp.so` 只扫 ASCII 字符串；REA 依赖清单只留按字母序前 500 条。
+- [x] Flutter 依赖清单：`--section dart` 对原始字节 138/138（REA 只给 27 个）。
+- [ ] Flutter 仍只扫 ASCII 字符串，拿不到类和函数结构；上架 iOS 版实测只剩 7 个包名（原因未证实）。
 - [ ] dex 的 SDK 统计是字符串命中，不是类定义；混淆后更差。
 - [ ] 原生库是否被业务调用需要 Ghidra，未验证。
 
@@ -35,14 +39,15 @@
 - [ ] logcat 缓冲小，采集必须早于第一个操作；飞行模式不等于离线。
 
 **交付与流程**
-- [ ] `walkthrough.py` 只支持一段录屏；每步秒数靠手记，要逐张核对。
-- [ ] 操作路径里的证据编号没和 `check_report.py` 交叉校验；报告不从数据生成。
+- [x] 操作路径支持多段录屏，证据编号由 `check_report.py --walkthrough` 核对。
+- [ ] 每步秒数靠手记，要逐张核对；报告不从数据生成。
+- [ ] `test_apk_optional_tool_failure_timeout_and_output_limits` 在 2026-10-20 一次变异运行中失败过一次，之后连续 5 次通过，原因未查（疑似计时敏感）。
 - [ ] 截图中的个人信息靠人工检查打码。
 
 **验证空白**
 - [ ] 「帮我找」从没完整实跑过。
 - [ ] 功能调研只有一次真机实跑（2026-10 Plaud Ask）。
-- [ ] REA 的 Android 命令（需 `jadx-headless-mcp` JAR）与 Ghidra 命令未验证。
+- [ ] REA 的 Android 命令（需 `jadx-headless-mcp` JAR）与 Ghidra 命令未验证；REA 带来的质变只有 iOS nib 界面一处已实测（`references/rea.md`）。
 - [ ] 第二份触发留出集未跑；评测不代表真实宿主的自动路由成功率。
 
 **分发**
