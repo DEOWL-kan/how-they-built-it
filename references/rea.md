@@ -24,6 +24,29 @@
 | `code-tracing.md` 里手工跑 JADX | 封装好的类、方法搜索和引用追踪（未验证，需另配 JAR） | `rea inspect-android-package` / `search-android-classes` / `inspect-android-method` / `trace-android-references` |
 | 「包里有 onnxruntime」以后，想知道业务代码是否调用它 | 原生库的 xrefs 和调用追踪（L4） | `rea xrefs` / `rea trace` 加 `--provider ghidra`，需要本机已有的 Ghidra |
 
+## 怎么搭配
+
+**两种接法，都由用户决定：**
+
+- **MCP（推荐常用的人）**：用户自己跑 `npx rea-agents setup`，它会改 Agent 配置、注册 REA 的 MCP 工具，重启 Agent 后生效。
+  之后 Agent 可以直接调 `analyze_javascript_application`、`trace_application_feature`、`identify_flutter_build`、
+  `inspect_dart_aot` 等工具（MCP 名就是 CLI 命令名把 `-` 换成 `_`；本仓库只实测过 CLI）。
+- **CLI（临时用）**：`npx -y rea-agents@latest <命令>`。这会下载并运行一个 npm 包，⚠️ 第一次用前先问用户。
+
+**什么时候交给 REA：** 在本技能的流程里，静态脚本到上限时 `feature_probe.py` 会提示下一步：
+
+1. **抬头 H5 文件数大于 0** → 把 H5 解到仓库外，再交给 REA 看模块和接口：
+   ```bash
+   unzip -q base.apk 'assets/*' -d /tmp/h5-target          # 离线包 zip 再解一层
+   rea analyze-javascript-application /tmp/h5-target/assets/<H5 所在目录> --json > app.json
+   ```
+   追踪某个字符串（比如 `retriever_info`），按 REA 文档用 `app.json` 构造输入跑 `trace-application-feature`。
+2. **有 `libapp.so`（Flutter）** → `rea identify-flutter-build` 拿快照哈希和引擎信息，`rea inspect-dart-aot` 拿部分依赖清单；
+   要确认某个包在不在，仍用 `feature_probe.py --keyword package:<包名>/`（原因见下文的截断问题）。
+3. **想知道原生库是否被业务调用** → 用户本机有 Ghidra 时才走 `rea xrefs`/`trace --provider ghidra`，属于 L4。
+
+REA 的结论回到本技能的证据体系里：一律 `[package]`，写进 `check_report.py` 校验的报告；运行时结论仍要真机。
+
 ## 实测出来的限制
 
 - **H5：拼接出来的 URL 识别不了。** `fetch`、`EventSource`、`WebSocket` 的字面量地址都能精确识别

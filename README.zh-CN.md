@@ -97,6 +97,19 @@ ln -s "$PWD/how-they-built-it" ~/.claude/skills/how-they-built-it
 依赖：Python 3.8+（只用标准库）、PATH 上的 `ffmpeg`/`ffprobe`，
 Android 还需要 `adb`。没有任何要 `pip install` 的东西。
 
+### 更新
+
+软链指向你 clone 下来的目录，所以更新就是在 **`main`** 上 pull：
+
+```bash
+git -C /path/to/how-they-built-it switch main
+git -C /path/to/how-they-built-it pull --ff-only
+```
+
+更新后新开一个 Agent 会话，让它重新读 `SKILL.md`。改了什么见 [`CHANGELOG.md`](CHANGELOG.md)。
+⚠️ clone 停在别的分支上就会一直是旧版，而且不会有任何提示——作者本机的安装就这样落后了 7 次合并。
+用 `git -C /path/to/how-they-built-it status -sb` 确认在 `main` 上。
+
 触发准确率是实测的，不是估的：调参集 36 条 **35/36**，留出集 **10/12**。
 「他们的付费墙看着就贵，我们的不行」「那个背景是视频吗」能触发；
 「帮我设计一个登录页」刻意不触发。
@@ -139,7 +152,7 @@ python3 scripts/image_probe.py bg.png --grid 9x20 --contrast '#1E2C28'
 
 ⚠️ 日志采集的命令比看起来讲究（顺序、设备时间、引号都会翻车），完整写法见 `references/feature-research.md` §C.2。
 
-`references/` 里是其余部分：`pitfalls.md`（30 条踩坑）、`feature-research.md`（功能调研全流程
+`references/` 里是其余部分：`pitfalls.md`（38 条编号踩坑）、`feature-research.md`（功能调研全流程
 与证据标签制度）、`web.md`（web 产品的规格是明文可读的，路径短得多）、`android.md`（真机与取包命令）。
 
 ## 边界
@@ -154,7 +167,7 @@ python3 scripts/image_probe.py bg.png --grid 9x20 --contrast '#1E2C28'
 
 ## 最有价值的文件是踩坑清单
 
-`references/pitfalls.md` 三十条里绝大多数是真实发生过的错误（个别是设计时识别的风险，
+`references/pitfalls.md` 38 条编号条目里绝大多数是真实发生过的错误（个别是设计时识别的风险，
 条目里会说明）：把引导页的视频当成登录页方案（犯了两次）、从 1fps 抽帧估读动效节奏、
 用文件体积推断有没有颗粒、把竞品的产品特征画进自家的规格表。
 

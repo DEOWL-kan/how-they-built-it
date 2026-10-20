@@ -107,6 +107,20 @@ in full.
 Requirements: Python 3.8+ (standard library only), `ffmpeg`/`ffprobe` on PATH,
 plus `adb` for Android devices. Nothing to `pip install`.
 
+### Updating
+
+The symlink points at your clone, so updating is a pull — on **`main`**:
+
+```bash
+git -C /path/to/how-they-built-it switch main
+git -C /path/to/how-they-built-it pull --ff-only
+```
+
+Start a new agent session afterwards so it reads the new `SKILL.md`. What changed
+is in [`CHANGELOG.md`](CHANGELOG.md). ⚠️ A clone left on a feature branch silently
+stays old — that happened to the author's own install (7 merges behind). Check with
+`git -C /path/to/how-they-built-it status -sb`.
+
 Triggering is measured, not hoped for: **35/36** on the 36-query tuning set in
 `evals/`, **10/12** held out. "their paywall looks expensive, ours doesn't" and
 "is that background a video?" reach it; "design me a login page" deliberately
@@ -160,7 +174,7 @@ python3 scripts/image_probe.py bg.png --grid 9x20 --contrast '#1E2C28'
 | `image_probe.py` | Grain or pure gradient? Where is the light? What is the minimum pixel contrast? |
 | `test_regressions.py` | One sample per bug this toolkit has ever had — run it after any change |
 
-`references/` holds the rest: `pitfalls.md` (thirty entries),
+`references/` holds the rest: `pitfalls.md` (38 numbered entries),
 `feature-research.md` (the feature-research path and its evidence-tag rules),
 `web.md` (web products read their specs in the clear — a much shorter route) and
 `android.md` (device and package commands).
@@ -183,7 +197,7 @@ better. It is not for taking anyone's work.
 
 ## Why `references/pitfalls.md` is the most useful file here
 
-Almost every one of its thirty entries is a mistake that actually happened (the
+Almost every one of its 38 numbered entries is a mistake that actually happened (the
 exceptions say so in the entry): attributing an onboarding video to a login
 screen — twice; estimating animation timing from 1 fps samples; inferring
 texture from file size; painting a competitor's product details onto your own
