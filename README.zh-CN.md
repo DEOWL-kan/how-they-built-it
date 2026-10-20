@@ -75,6 +75,24 @@
 
 ## 安装
 
+**Claude Code（插件，推荐）**：
+
+```bash
+claude plugin marketplace add DEOWL-kan/how-they-built-it
+claude plugin install how-they-built-it@deowl-kan
+```
+
+**Codex（插件）**：
+
+```bash
+codex plugin marketplace add DEOWL-kan/how-they-built-it
+codex plugin add how-they-built-it@deowl-kan
+```
+
+装完新开一个会话。也可以在会话里用 `/plugin`（Claude Code）或 `/plugins`（Codex）浏览安装。
+
+**手动（clone + 软链，适合要改代码的人）**：
+
 ```bash
 git clone https://github.com/DEOWL-kan/how-they-built-it.git
 ```
@@ -99,14 +117,23 @@ Android 还需要 `adb`。没有任何要 `pip install` 的东西。
 
 ### 更新
 
-软链指向你 clone 下来的目录，所以更新就是在 **`main`** 上 pull：
+改了什么见 [`CHANGELOG.md`](CHANGELOG.md)。每次发布都会升 `.claude-plugin/plugin.json` 的 `version`，插件按版本号判断有没有更新。
+
+| 安装方式 | 更新命令 |
+|---|---|
+| Claude Code 插件 | `claude plugin marketplace update deowl-kan`，再 `claude plugin update how-they-built-it@deowl-kan`；也可以在 `/plugin` 里打开自动更新 |
+| Codex 插件 | `codex plugin marketplace upgrade deowl-kan` |
+
+更新后都要新开会话才会生效。
+
+**手动安装**的话，软链指向你 clone 下来的目录，所以更新就是在 **`main`** 上 pull：
 
 ```bash
 git -C /path/to/how-they-built-it switch main
 git -C /path/to/how-they-built-it pull --ff-only
 ```
 
-更新后新开一个 Agent 会话，让它重新读 `SKILL.md`。改了什么见 [`CHANGELOG.md`](CHANGELOG.md)。
+更新后新开一个 Agent 会话，让它重新读 `SKILL.md`。
 ⚠️ clone 停在别的分支上就会一直是旧版，而且不会有任何提示——作者本机的安装就这样落后了 7 次合并。
 用 `git -C /path/to/how-they-built-it status -sb` 确认在 `main` 上。
 

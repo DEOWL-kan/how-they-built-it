@@ -83,6 +83,24 @@ It asks before it downloads a package, drives someone's app, or writes data anyw
 
 ## Install
 
+**Claude Code (plugin, recommended)**:
+
+```bash
+claude plugin marketplace add DEOWL-kan/how-they-built-it
+claude plugin install how-they-built-it@deowl-kan
+```
+
+**Codex (plugin)**:
+
+```bash
+codex plugin marketplace add DEOWL-kan/how-they-built-it
+codex plugin add how-they-built-it@deowl-kan
+```
+
+Start a new session afterwards. `/plugin` (Claude Code) and `/plugins` (Codex) browse the same.
+
+**By hand (clone + symlink, if you want to change the code)**:
+
 ```bash
 git clone https://github.com/DEOWL-kan/how-they-built-it.git
 ```
@@ -109,15 +127,24 @@ plus `adb` for Android devices. Nothing to `pip install`.
 
 ### Updating
 
-The symlink points at your clone, so updating is a pull — on **`main`**:
+What changed is in [`CHANGELOG.md`](CHANGELOG.md). Every release bumps `version` in
+`.claude-plugin/plugin.json`; plugin installs compare that number.
+
+| Installed as | Update with |
+|---|---|
+| Claude Code plugin | `claude plugin marketplace update deowl-kan`, then `claude plugin update how-they-built-it@deowl-kan` — or turn on auto-update in `/plugin` |
+| Codex plugin | `codex plugin marketplace upgrade deowl-kan` |
+
+Start a new session afterwards.
+
+**By hand**: the symlink points at your clone, so updating is a pull — on **`main`**:
 
 ```bash
 git -C /path/to/how-they-built-it switch main
 git -C /path/to/how-they-built-it pull --ff-only
 ```
 
-Start a new agent session afterwards so it reads the new `SKILL.md`. What changed
-is in [`CHANGELOG.md`](CHANGELOG.md). ⚠️ A clone left on a feature branch silently
+Start a new agent session afterwards so it reads the new `SKILL.md`. ⚠️ A clone left on a feature branch silently
 stays old — that happened to the author's own install (7 merges behind). Check with
 `git -C /path/to/how-they-built-it status -sb`.
 

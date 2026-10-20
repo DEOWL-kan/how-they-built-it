@@ -1,0 +1,14 @@
+{
+  "name": "deowl-kan",
+  "description": "Skills from DEOWL-kan: evidence-first teardown of how competitor apps and web screens are built.",
+  "owner": {
+    "name": "DEOWL-kan"
+  },
+  "plugins": [
+    {
+      "name": "how-they-built-it",
+      "source": "./",
+      "description": "Reverse-engineer how a competitor's app or web screen is built: measured specs, evidence-tagged feature research, numbered walkthroughs."
+    }
+  ]
+}

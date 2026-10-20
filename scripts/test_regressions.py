@@ -746,6 +746,22 @@ def test_walkthrough_steps_have_pictures_and_the_right_frame():
         assert pix and max(pix) < 40, "step 1 at 2.9s must be the black frame still on screen"
 
 
+def test_plugin_manifest_version_skills_and_marketplaces_agree():
+    """pitfall 39 — plugin installs update only when `version` changes, and Codex
+    exposes the root SKILL.md only with skills="./." (not "./", ".", or nothing)."""
+    import json
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    plugin = json.load(open(os.path.join(root, ".claude-plugin", "plugin.json")))
+    assert plugin["skills"] == "./.", plugin.get("skills")
+    top = re.search(r"^## (\S+) ·", open(os.path.join(root, "CHANGELOG.md"), encoding="utf-8").read(), re.M)
+    assert top and top.group(1) == plugin["version"], (top and top.group(1), plugin["version"])
+    claude = json.load(open(os.path.join(root, ".claude-plugin", "marketplace.json")))
+    codex = json.load(open(os.path.join(root, ".agents", "plugins", "marketplace.json")))
+    assert claude["name"] == codex["name"], "README tells both clients the same @marketplace name"
+    for m in (claude, codex):
+        assert [e["name"] for e in m["plugins"]] == [plugin["name"]], m
+
+
 def test_nb_frames_is_not_frame_count():
     """pitfall 13 — the header must not echo the container's nb_frames."""
     src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),

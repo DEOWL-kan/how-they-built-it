@@ -1,0 +1,12 @@
+{
+  "name": "how-they-built-it",
+  "version": "1.1.0",
+  "description": "Reverse-engineer how a competitor's app or web screen is built: measured specs, evidence-tagged feature research, numbered walkthroughs.",
+  "author": {
+    "name": "DEOWL-kan"
+  },
+  "homepage": "https://github.com/DEOWL-kan/how-they-built-it",
+  "repository": "https://github.com/DEOWL-kan/how-they-built-it",
+  "license": "MIT",
+  "skills": "./."
+}
