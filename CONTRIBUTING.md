@@ -17,6 +17,18 @@ needs to argue why a few lines of stdlib cannot do it. Optional Web capture depe
 (Node/Playwright/Chromium) belong in their own tool directory; apkanalyzer/JADX are
 optional external analysis tools. Missing advanced tools must not break core scripts.
 
+## Releasing
+
+Plugin installs (Claude Code and Codex) update only when `version` in
+`.claude-plugin/plugin.json` changes. For any change users should receive: bump it
+(semver), and put the same number at the top of `CHANGELOG.md` as `## <version> · <date>`.
+`test_regressions.py` fails if the two disagree. Check the manifest with
+`claude plugin validate --strict .`; Codex has no validate command.
+
+⚠️ `"skills": "./."` is deliberate. Codex ignores a root `SKILL.md` unless a `skills`
+path is given, and rejects `./` and `.`; `./.` is the one spelling that exposes the
+root skill in both clients (pitfall 39). Do not "tidy" it.
+
 ## Fixing a bug
 
 Three things, not one:

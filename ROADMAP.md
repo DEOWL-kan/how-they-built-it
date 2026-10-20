@@ -46,13 +46,15 @@
 - [ ] 第二份触发留出集未跑；评测不代表真实宿主的自动路由成功率。
 
 **分发**
-- [ ] 没有版本号和 release，只有 CHANGELOG；用户靠 `git pull` 更新，停在别的分支上不会有任何提示。
+- [x] 1.1.0 起可作为 Claude Code / Codex 插件安装和更新，版本号与 CHANGELOG 由回归测试保持一致。
+- [ ] Codex 认根目录 skill 靠 `"skills": "./."`，不是文档承诺；Codex 升级后要重测（pitfalls 第 39 条）。
+- [ ] 手动 clone 的用户停在别的分支上不会有任何提示。
 
 ### 建议优先做
 
 1. 拿一个真实场景完整跑一遍「帮我找」。
 2. 把操作路径的证据编号接进 `check_report.py`。
-3. 决定分发方式：继续 clone + pull，或做成 Claude Code 插件市场，支持 `/plugin` 更新。
+3. 每次发布记得升版本号（见 CONTRIBUTING「Releasing」），否则插件用户收不到。
 
 ---
 

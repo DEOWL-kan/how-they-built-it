@@ -757,6 +757,24 @@ ffmpeg scene 时间戳对不上，最后改用 scene 时间戳来量。
 **判据**：后台流式采集在**第一个操作之前**启动并确认 `RUN START` 标记在文件里；事后 `-d` 或回溯 `-T`
 补不回被覆盖的部分，那段记为「日志未覆盖」。`-G` 调大缓冲是改整机状态，先征得同意。
 
+## 39. 一份插件清单要同时喂 Claude Code 和 Codex，Codex 的规则只能实测
+
+**发生了什么**（2026-10-20，Claude Code 2.1.280、Codex CLI 0.162.1，均在隔离的配置目录里实装）：
+本仓库的 SKILL.md 在根目录。Claude Code 支持根目录 skill；Codex 只扫 `skills/<名字>/SKILL.md`，
+官方文档里没有根目录的写法。
+
+- 第一版加了 `skills/how-they-built-it/`，里面全是指向根目录的软链。Claude Code 装完软链原样保留、能用；
+  **Codex 装插件时丢掉了全部软链**，缓存里那个目录是空的。
+- 改为在清单里写 `skills` 字段，逐个对照，用 `codex debug prompt-input` 看 skill 有没有进提示词：
+  不写 → 0；`"."` → 0；`"./"` → 0（源码里明确拒绝）；**`"./."` → 1**。同一份清单在 Claude Code 里校验通过、识别 1 个 skill。
+
+**判据**：
+- ⚠️ `"./."` 能用，靠的是 Codex 目前的路径校验，不是文档承诺。Codex 升级后要重测：
+  在隔离的 `CODEX_HOME` 里装一遍，`codex debug prompt-input hi | grep how-they-built-it:how-they-built-it`。
+- ⛔ 别以为「软链在一个客户端能用，另一个也能用」。
+- 两个客户端都按 `version` 判断有没有更新：版本号不变，推了新提交用户也拿不到。
+⇒ 回归样本：`test_plugin_manifest_version_skills_and_marketplaces_agree`（`skills` 改成 `./`、版本号与 CHANGELOG 不一致、两个市场名不同，都会失败）。
+
 ## Web capture：预先识别的证据风险（2026-10-08，自制样本验证）
 
 不是历史竞品事故：本次采集器开发用真实 Chromium 和本地 HTTP 服务验证了以下反例。背景请求不能因时间靠近点击就归属该功能；500 仍可带 JSON 正文，断连才是传输失败；只看 WebSocket 握手会漏掉双向帧。正文缺失、超限和空体不能混同；脱敏要发生在落盘之前。

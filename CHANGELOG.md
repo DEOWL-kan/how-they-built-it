@@ -1,8 +1,14 @@
 # CHANGELOG
 
 更新方法见 README「更新」一节。只记对使用者有影响的变化；完整历史看 `git log`。
+标题里的版本号必须等于 `.claude-plugin/plugin.json` 的 `version`（回归测试会检查），插件靠它判断有没有更新。
 
-## 2026-10-20
+## 1.1.0 · 2026-10-20
+
+- 可以作为 **Claude Code 插件**和 **Codex 插件**安装与更新（README「安装」「更新」）。两个平台共用 `.claude-plugin/plugin.json`。
+- SKILL.md 写明脚本路径相对技能目录，不是用户的项目目录。
+
+## 1.0.0 · 2026-10-20（插件化之前的基线）
 
 - 「现状与不足」整理进 `ROADMAP.md` 顶部。
 - `feature_probe.py` 读到 H5 或 Flutter 时，提示下一步可以怎么用 REA（`references/rea.md` 新增「怎么搭配」一节）。
