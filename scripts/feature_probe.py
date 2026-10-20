@@ -505,6 +505,12 @@ def main():
     if not web:
         print("  ⚠️  No H5 read. If the feature runs in a WebView, its code was fetched at runtime")
         print("      or sits in an archive this script cannot open — uncovered, not absent.\n")
+    # Where this script's ceiling is, say what goes past it.
+    if web:
+        print("  → H5 found. Module graph and endpoint trace past this script: references/rea.md\n")
+    if any(lib == "libapp.so" for lib, _, _ in native):
+        print("  → Flutter. Snapshot hash and a PARTIAL package list via REA: references/rea.md;")
+        print("    to check one package use --keyword package:<name>/\n")
 
     if "native" in want:
         report_native(native)
