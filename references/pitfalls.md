@@ -775,6 +775,24 @@ ffmpeg scene 时间戳对不上，最后改用 scene 时间戳来量。
 - 两个客户端都按 `version` 判断有没有更新：版本号不变，推了新提交用户也拿不到。
 ⇒ 回归样本：`test_plugin_manifest_version_skills_and_marketplaces_agree`（`skills` 改成 `./`、版本号与 CHANGELOG 不一致、两个市场名不同，都会失败）。
 
+## 40. iOS：Mac 上的 iPhone App 能读，但三处和预想的不一样
+
+**发生了什么**（2026-10-20，macOS 26.4，Mac 上已装的两个 iPhone App + 一个 Mac 应用）：
+
+- **「Mac 副本一定是 iPad 版」不成立。** 调研结论是 Mac 副本为 iPad 瘦身；实测一个是 `idiom 2`（iPad），另一个是 `idiom 1`（iPhone）。
+  脚本第一版把「thinned for iPad」写死在警告里，已改为读 Assets.car 的瘦身参数后再说。
+- **`Wrapper/` 不等于 iPhone App。** 一个 Mac 应用的 `Wrapper/X.app` 只有图标和 Info.plist。`feature_probe.py` 第一版照样当 iPhone App 读，
+  报「0 strings」——读不到被说成了读到空。现在要求 Info.plist 指向 Mach-O，否则拒绝。
+- **Flutter iOS 的 Dart 包名几乎全没了。** 上架 iOS 版 `App.framework/App` 里原始字节只有 7 个 `package:` 名，同一项目本地构建的 Android `libapp.so` 有 138 个。
+  工具与原始字节逐一相符，不是漏读；少的原因（混淆/拆分调试信息）未证实。反过来，iOS 的 `.bundle` 名给出了 Android 端搜不到的 Stripe、Sentry、Firebase Auth。
+
+**附带**：`ios_bundle.report` 第一版遇到坏输入抛 `SystemExit`，变异测试时它绕过了测试框架的 `except Exception`，整个套件直接退出、没有 FAIL 行。
+改成 `ValueError`。⇒ 写给测试调用的函数，⛔ 不要在里面 `sys.exit`。
+
+**判据**：读 Mac 副本前看瘦身目标；拒绝没有可执行文件的包；Dart 包名少时用 `.bundle` 和框架名交叉核对，⛔ 不写「没有依赖」。
+⇒ 回归样本：`test_ios_bundle_reads_plain_parts_only`（加密段被读、进入 Wrapper 外层、漏掉 iOS 的 App.framework 各令其失败）、
+`test_a_wrapper_without_an_executable_is_not_an_iphone_app`。
+
 ## Web capture：预先识别的证据风险（2026-10-08，自制样本验证）
 
 不是历史竞品事故：本次采集器开发用真实 Chromium 和本地 HTTP 服务验证了以下反例。背景请求不能因时间靠近点击就归属该功能；500 仍可带 JSON 正文，断连才是传输失败；只看 WebSocket 握手会漏掉双向帧。正文缺失、超限和空体不能混同；脱敏要发生在落盘之前。

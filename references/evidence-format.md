@@ -69,6 +69,12 @@ evidence_ids/alternatives 是数组；rationale 说明依据或未覆盖原因�
 
 这些断言保护记录的最低要求；不能通过伪造 source 来证明事实。原始材料仍需复核。
 
+## 操作路径交叉检查
+
+`python3 scripts/check_report.py report.json --walkthrough steps.json` 核对 `walkthrough.py` 的每一步：`evidence` 必填且存在于本报告；
+该证据须为 device/browser 的 observation；从录屏截取的步骤（有 `at` 或 `clip`），证据 `locator.target` 的文件名须与该步的录屏一致。
+它只证明截图挂在了对的记录上，不证明截图内容与步骤描述相符——那仍要人看。
+
 ## HTTP / 流事件附件交叉检查
 
 `python3 scripts/check_report.py report.json --capture /outside/repo/capture` 额外核对 manifest、network.jsonl、actions.jsonl 的会话/请求/动作 ID、正文状态及提供的页面/帧/重定向字段。动作必须是记录中的时间窗口候选；匹配不证明因果。引用 streams.jsonl 时 locator 另带 event_id，校验器按事件 ID 核对其 request_id、会话、候选动作与正文状态。CDP ID 不等于 HTTP ID，不能将候选关联当作同一条记录。candidate_action_ids 必须是非空字符串组成的数组，字符串子串不算关联。

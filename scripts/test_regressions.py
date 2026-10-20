@@ -442,6 +442,93 @@ def test_bundled_h5_is_read_including_offline_zips():
     assert "/api/v1/ask" in api and "h5.zip:dist/ask.js" in api, api
 
 
+def test_dart_packages_are_listed_in_full_from_libapp_only():
+    """feature_probe — REA's inspect-dart-aot stopped at 500 URIs alphabetically
+    (27 packages on a real app); the raw libapp.so carried 138, all found here."""
+    rows = [("package:dio/dio.dart", "a.apk:lib/arm64-v8a/libapp.so", True),
+            ("package:zeta_late/z.dart package:dio/src/x.dart", "a.apk:lib/arm64-v8a/libapp.so", True),
+            ("package:not_dart/x.dart", "a.apk:lib/arm64-v8a/libother.so", True)]
+    out = _capture(feature_probe.report_dart, rows)
+    assert "2 packages" in out and "zeta_late" in out and "not_dart" not in out, out
+    assert re.search(r"\s2\s+dio\s", out), out
+    assert "ABI split" in _capture(feature_probe.report_dart, rows[2:])
+
+
+def _tiny_macho(plain, secret, cryptid=1):
+    """64-bit Mach-O: header, one LC_ENCRYPTION_INFO_64 over `secret`, then data."""
+    header = struct.pack("<IiiIIIII", 0xfeedfacf, 0x0100000c, 0, 2, 1, 24, 0, 0)
+    body_at = 32 + 24
+    data = plain + b"\x00" + secret + b"\x00"
+    off = body_at + len(plain) + 1
+    cmd = struct.pack("<IIIIII", 0x2C, 24, off, len(secret), cryptid, 0)
+    return header + cmd + data
+
+
+def test_ios_bundle_reads_plain_parts_only():
+    """ios_bundle / feature_probe on an iPhone app installed on a Mac: encrypted
+    bytes are never read, and Wrapper/iTunesMetadata.plist (purchaser details) is
+    never opened. Also: the Flutter iOS AOT (App.framework/App) feeds the dart list."""
+    import plistlib
+    import tempfile
+    import ios_bundle
+    with tempfile.TemporaryDirectory() as root:
+        mac = os.path.join(root, "Some.app")
+        app = os.path.join(mac, "Wrapper", "Inner.app")
+        os.makedirs(os.path.join(app, "Frameworks", "App.framework"))
+        os.makedirs(os.path.join(app, "Frameworks", "TXFFmpeg.framework"))
+        os.makedirs(os.path.join(app, "Stripe.bundle"))
+        with open(os.path.join(mac, "Wrapper", "iTunesMetadata.plist"), "wb") as f:
+            plistlib.dump({"appleId": "PURCHASER_SECRET", "u": "https://leak.example.io/x"}, f)
+        os.chmod(os.path.join(mac, "Wrapper", "iTunesMetadata.plist"), 0)
+        with open(os.path.join(app, "Info.plist"), "wb") as f:
+            plistlib.dump({"CFBundleExecutable": "Inner", "CFBundleIdentifier": "t.inner",
+                           "CFBundleURLTypes": [{"CFBundleURLSchemes": ["innerapp"]}],
+                           "LSApplicationQueriesSchemes": ["weixin"], "UIBackgroundModes": ["audio"],
+                           "NSMicrophoneUsageDescription": "x"}, f, fmt=plistlib.FMT_BINARY)
+        with open(os.path.join(app, "PrivacyInfo.xcprivacy"), "wb") as f:
+            plistlib.dump({"NSPrivacyTracking": True, "NSPrivacyTrackingDomains": ["t.example.io"],
+                           "NSPrivacyCollectedDataTypes": [{"NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID"}]}, f)
+        with open(os.path.join(app, "Inner"), "wb") as f:
+            f.write(_tiny_macho(b"https://plain.example.io/a", b"https://cipher.example.io/b"))
+        with open(os.path.join(app, "Frameworks", "App.framework", "App"), "wb") as f:
+            f.write(_tiny_macho(b"package:dio/dio.dart", b"zz", cryptid=0))
+        with open(os.path.join(app, "Frameworks", "TXFFmpeg.framework", "TXFFmpeg"), "wb") as f:
+            f.write(_tiny_macho(b"avcodec_open2", b"zz", cryptid=0))
+        assert feature_probe.macho_encryption(open(os.path.join(app, "Inner"), "rb").read())[0][2] == 1
+        out = _capture(ios_bundle.report, mac)
+        for want in ("t.inner", "innerapp", "weixin", "audio", "Microphone", "tracking=True",
+                     "t.example.io", "DeviceID", "Stripe.bundle", "cryptid 1", "thinned for one device class"):
+            assert want in out, (want, out)
+        assert "PURCHASER_SECRET" not in out
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            native, strings = feature_probe.collect([mac])
+        texts = " ".join(t for t, _, _ in strings)
+        assert "plain.example.io" in texts and "cipher.example.io" not in texts, texts
+        assert "leak.example.io" not in texts and "PURCHASER_SECRET" not in texts
+        assert any("TXFFmpeg" in n for n, _, _ in native), native
+        assert "ffmpeg bundled" in _capture(feature_probe.report_native, native)
+        assert "dio" in _capture(feature_probe.report_dart, strings)
+        os.chmod(os.path.join(mac, "Wrapper", "iTunesMetadata.plist"), 0o600)
+
+
+def test_a_wrapper_without_an_executable_is_not_an_iphone_app():
+    """feature_probe — a Mac app had Wrapper/X.app with only an icon and Info.plist;
+    it was reported as an iPhone app with 0 strings instead of being refused."""
+    import plistlib
+    import tempfile
+    with tempfile.TemporaryDirectory() as root:
+        stub = os.path.join(root, "Stub.app", "Wrapper", "Stub.app")
+        os.makedirs(stub)
+        with open(os.path.join(stub, "Info.plist"), "wb") as f:
+            plistlib.dump({"CFBundleIdentifier": "x.stub"}, f)
+        try:
+            feature_probe.resolve_app(os.path.join(root, "Stub.app"))
+            raise AssertionError("stub accepted")
+        except ValueError as e:
+            assert "Mach-O" in str(e), e
+
+
 def test_report_native_states_bundled_not_running():
     """feature_probe — shipping a runtime is a [package] fact, not a [device] one."""
     out = _capture(feature_probe.report_native,
@@ -760,6 +847,57 @@ def test_plugin_manifest_version_skills_and_marketplaces_agree():
     assert claude["name"] == codex["name"], "README tells both clients the same @marketplace name"
     for m in (claude, codex):
         assert [e["name"] for e in m["plugins"]] == [plugin["name"]], m
+
+
+def test_walkthrough_evidence_must_be_the_cited_observation():
+    """check_report --walkthrough — a "[device]" screenshot is only as good as the
+    record behind it: the id must exist, be an observation, and cite the same
+    recording the step was cut from. Also: steps may each name their own video."""
+    import json
+    import subprocess
+    import tempfile
+    import check_report
+    import walkthrough
+    report = {"evidence": [
+        {"id": "e1", "source": "device", "kind": "observation", "locator": {"target": "/x/rec.mp4", "position": "00:02"}},
+        {"id": "e2", "source": "package", "kind": "code", "locator": {"target": "base.apk", "position": "dex"}}]}
+    spec = {"video": "rec.mp4", "steps": [
+        {"action": "ok", "at": 1, "evidence": "e1"},
+        {"action": "missing", "image": "a.png"},
+        {"action": "unknown id", "image": "a.png", "evidence": "e9"},
+        {"action": "static", "image": "a.png", "evidence": "e2"},
+        {"action": "other recording", "at": 1, "video": "rec2.mp4", "evidence": "e1"}]}
+    with tempfile.TemporaryDirectory() as root:
+        path = os.path.join(root, "steps.json")
+        with open(path, "w") as f:
+            json.dump(spec, f)
+        errs = check_report.validate_walkthrough(report, path)
+        joined = "\n".join(errs)
+        assert len(errs) == 4, errs
+        assert "steps[1]" not in joined, errs
+        for n, word in ((2, "needs the id"), (3, "no evidence"), (4, "not a device"), (5, "rec2.mp4")):
+            assert any(e.startswith("walkthrough.steps[%d]" % n) and word in e for e in errs), (n, errs)
+        # the CLI wires it in: a valid report plus a bad walkthrough must exit 1
+        example = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                               "examples", "research", "report.json")
+        cli = subprocess.run([sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                              "check_report.py"), example, "--walkthrough", path], capture_output=True, text=True)
+        assert cli.returncode == 1 and "walkthrough.steps[1]" in cli.stderr, cli.stderr
+    # per-step videos pass the spec check; a step with neither video fails
+    assert walkthrough.check({"steps": [{"action": "a", "at": 1, "video": "r2.mp4"}]}) == []
+    assert walkthrough.check({"steps": [{"action": "a", "at": 1}]})
+
+
+def test_readme_counts_match_the_repo():
+    """README counts went stale twice (pitfalls "30" while there were 38). Pin them."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    tests = len([n for n in globals() if n.startswith("test_")])
+    pitfalls = len(re.findall(r"^## \d+\. ", open(os.path.join(root, "references", "pitfalls.md"),
+                                                   encoding="utf-8").read(), re.M))
+    en = open(os.path.join(root, "README.md"), encoding="utf-8").read()
+    zh = open(os.path.join(root, "README.zh-CN.md"), encoding="utf-8").read()
+    assert f"**{tests} regression samples**" in en and f"**{tests} 个回归样本**" in zh, tests
+    assert f"[{pitfalls} pitfalls]" in en and f"[{pitfalls} 条踩坑]" in zh, pitfalls
 
 
 def test_nb_frames_is_not_frame_count():

@@ -269,10 +269,13 @@ PASS 实测 / PLAUSIBLE 推断 / SKIP 未验
    和 `walkthrough.md`（贴进报告）。
 4. **逐张核对截图。** 手记的秒数常有半秒到一秒的误差；截图和步骤对不上，就改 `at` 重新生成。
    可以用 `frame_diff.py` 的分段结果来精确定位转场。
+5. **和证据记录对上号。** 每一步写 `evidence`（report.json 里那条证据的 id），再跑
+   `python3 scripts/check_report.py report.json --walkthrough steps.json`：证据必须存在、必须是真机或浏览器的观察，
+   从录屏截出来的步骤还必须引用同一段录屏。
 
 - ⛔ 截帧不要用 `ffmpeg -ss T -frames:v 1`：变帧率录屏里画面静止时没有帧，这个命令会给出 **T 之后**的下一次变化。
   `walkthrough.py` 取的是 T 时刻（含）之前的最后一帧（pitfalls 第 36 条）。
-- ⚠️ `screenrecord` 单次录制有上限（常见为 180 秒，以设备上 `adb shell screenrecord --help` 为准）；流程更长就拆成几段各出一份，或改用 `image` 截图。
+- ⚠️ `screenrecord` 单次录制有上限（常见为 180 秒，以设备上 `adb shell screenrecord --help` 为准）；流程更长就分几段录，在每一步上写它自己的 `video`。
 - ⛔ 截图和录屏都是竞品内容：只用于分析，标「竞品分析用」，放仓库外。`walkthrough.py` 拒绝往本仓库里写。
 - ⚠️ 截图会拍到账号名、录音标题等个人数据，交付前检查一遍，必要时打码。
 

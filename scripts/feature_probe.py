@@ -41,12 +41,13 @@ import argparse
 import collections
 import io
 import os
+import plistlib
 import re
 import struct
 import zipfile
 from urllib.parse import urlsplit
 
-SECTIONS = ("native", "sdk", "host", "api", "keyword")
+SECTIONS = ("native", "sdk", "dart", "host", "api", "keyword")
 
 # Native libraries whose presence answers a real architecture question.
 LIB_MEANING = [
@@ -249,10 +250,145 @@ def _text_before(data, start):
 WEB_TEXT = (".js", ".mjs", ".html", ".htm")
 
 
+MACHO_MAGICS = {b"\xcf\xfa\xed\xfe", b"\xce\xfa\xed\xfe"}       # 64/32-bit, little-endian
+FAT_MAGICS = {b"\xca\xfe\xba\xbe", b"\xca\xfe\xba\xbf"}         # fat / fat64, big-endian
+LC_ENCRYPTION_INFO, LC_ENCRYPTION_INFO_64 = 0x21, 0x2C
+
+
+def is_macho(head):
+    # 0xcafebabe is also a Java class file; a fat Mach-O has a small arch count.
+    if head[:4] in FAT_MAGICS:
+        return len(head) >= 8 and 0 < struct.unpack(">I", head[4:8])[0] < 20
+    return head[:4] in MACHO_MAGICS
+
+
+def macho_encryption(data):
+    """[(file_offset, size, cryptid)] for every LC_ENCRYPTION_INFO in every slice.
+
+    App Store binaries carry FairPlay encryption over a declared range only —
+    measured on iPhone apps installed on a Mac: one 4096-byte page of the main
+    executable, frameworks cryptid 0. This reports the range so callers can skip
+    it; nothing here decrypts anything.
+    """
+    slices = []
+    if data[:4] in FAT_MAGICS:
+        wide = data[:4] == b"\xca\xfe\xba\xbf"
+        count = struct.unpack_from(">I", data, 4)[0]
+        step = 32 if wide else 20
+        for k in range(min(count, 20)):
+            at = 8 + k * step
+            if at + step > len(data):
+                break
+            offset = (struct.unpack_from(">Q", data, at + 8)[0] if wide
+                      else struct.unpack_from(">I", data, at + 8)[0])
+            slices.append(offset)
+    else:
+        slices.append(0)
+    found = []
+    for base in slices:
+        head = data[base:base + 4]
+        if head not in MACHO_MAGICS:
+            continue
+        wide = head == b"\xcf\xfa\xed\xfe"
+        try:
+            ncmds = struct.unpack_from("<I", data, base + 16)[0]
+        except struct.error:
+            continue
+        at = base + (32 if wide else 28)
+        for _ in range(min(ncmds, 4096)):
+            try:
+                cmd, size = struct.unpack_from("<II", data, at)
+            except struct.error:
+                break
+            if cmd in (LC_ENCRYPTION_INFO, LC_ENCRYPTION_INFO_64):
+                off, length, cid = struct.unpack_from("<III", data, at + 8)
+                found.append((base + off, length, cid))
+            if size < 8:
+                break
+            at += size
+    return found
+
+
+def without_encrypted(data):
+    """The bytes with every encrypted range blanked: those bytes are ciphertext,
+    not text, and they are the one part of an App Store binary we never read."""
+    ranges = [(o, n) for o, n, cid in macho_encryption(data) if cid]
+    if not ranges:
+        return data
+    buf = bytearray(data)
+    for offset, size in ranges:
+        buf[offset:offset + size] = bytes(min(size, max(0, len(buf) - offset)))
+    return bytes(buf)
+
+
+def resolve_app(path):
+    """An iPhone app installed on an Apple Silicon Mac is /Applications/X.app with
+    the real bundle at Wrapper/Y.app. Only Y.app is ever read: Wrapper/ also holds
+    iTunesMetadata.plist, which can carry the purchaser's account details."""
+    wrapped = False
+    wrapper = os.path.join(path, "Wrapper")
+    if os.path.isdir(wrapper):
+        inner = [n for n in sorted(os.listdir(wrapper)) if n.endswith(".app")]
+        if len(inner) != 1:
+            raise ValueError(f"{path}: Wrapper/ holds {len(inner)} .app bundles, expected 1")
+        path, wrapped = os.path.join(wrapper, inner[0]), True
+    # A Wrapper/ alone proves nothing: one Mac app on the test machine had
+    # Wrapper/X.app holding only an icon and an Info.plist. Require the executable.
+    try:
+        with open(os.path.join(path, "Info.plist"), "rb") as f:
+            exe = plistlib.load(f).get("CFBundleExecutable")
+        with open(os.path.join(path, exe), "rb") as f:
+            ok = is_macho(f.read(8))
+    except (OSError, ValueError, AttributeError, TypeError, plistlib.InvalidFileException):
+        ok = False
+    if not ok:
+        raise ValueError(f"{path}: no Info.plist naming a Mach-O executable — not an app bundle")
+    return path, wrapped
+
+
+def _scan_dir(root, label, native, strings):
+    for folder, dirs, files in os.walk(root):
+        dirs.sort()
+        for name in sorted(files):
+            full = os.path.join(folder, name)
+            if os.path.islink(full) or not os.path.isfile(full):
+                continue
+            rel = os.path.relpath(full, root)
+            src = f"{label}:{rel}"
+            low = name.lower()
+            with open(full, "rb") as f:
+                head = f.read(8)
+            if is_macho(head):
+                with open(full, "rb") as f:
+                    data = f.read()
+                native.append((rel, len(data), src))
+                strings += [(s, src, ok) for s, ok in binary_strings(without_encrypted(data))]
+            elif low.endswith(WEB_TEXT):
+                with open(full, "rb") as f:
+                    text = f.read().decode("utf-8", "replace")
+                strings += [(line, src, True) for line in text.splitlines() if line.strip()]
+            elif low.endswith(".zip"):
+                try:
+                    with zipfile.ZipFile(full) as z:
+                        _scan_zip(z, src, native, strings, 1)
+                except (zipfile.BadZipFile, RuntimeError, NotImplementedError) as e:
+                    print(f"  ! stopped reading nested archive ({e}): {src}")
+
+
 def collect(paths):
-    """Returns (native, strings) where strings is [(text, source_file, complete)]."""
+    """Returns (native, strings) where strings is [(text, source_file, complete)].
+
+    Accepts APKs and, for iOS, an .app bundle directory (or /Applications/X.app
+    holding an iPhone app under Wrapper/)."""
     native, strings = [], []
     for path in paths:
+        if isinstance(path, str) and os.path.isdir(path):
+            app, wrapped = resolve_app(path)
+            if wrapped:
+                print(f"  ! {os.path.basename(path)} is the Mac copy of an iPhone app — the store thinned it")
+                print("    for one device class; ios_bundle.py prints which (idiom 1 iPhone, 2 iPad)")
+            _scan_dir(app, os.path.basename(app), native, strings)
+            continue
         if not zipfile.is_zipfile(path):
             print(f"  ! skipped (not a zip/apk): {path}")
             continue
@@ -333,6 +469,43 @@ def report_sdk(strings):
         return
     for key, n in counts.most_common(20):
         print(f"  {n:6d}  {key:<40} ({src[key]})")
+
+
+DART_PACKAGE = re.compile(r"package:([a-z][a-z0-9_]*)/")
+
+
+def report_dart(strings):
+    """Every Dart package whose library URIs survive in libapp.so.
+
+    Flutter keeps its third-party stack out of dex, so report_sdk says "none" for a
+    Flutter app. The AOT snapshot still carries `package:<name>/…` library URIs.
+    REA's inspect-dart-aot returns at most 500 of them in alphabetical order —
+    measured on one app it stopped at `package:flutter/…` and missed a direct
+    dependency — so this lists every name instead of a capped projection.
+    """
+    counts, src = collections.Counter(), {}
+    libapp = False
+    for text, where, _ in strings:
+        # Android: lib/<abi>/libapp.so. iOS: Frameworks/App.framework/App.
+        if not where.endswith(("libapp.so", "App.framework/App")):
+            continue
+        libapp = True
+        for m in DART_PACKAGE.finditer(text):
+            counts[m.group(1)] += 1
+            src.setdefault(m.group(1), where)
+    print("\n## Dart packages in libapp.so (Flutter third-party stack)")
+    if not libapp:
+        print("  no libapp.so read — not a Flutter AOT app, or its ABI split was not supplied.")
+        return
+    if not counts:
+        print("  libapp.so read, no package: URIs found — uncovered, not 'no dependencies'.")
+        return
+    print(f"  {len(counts)} packages. Count = string hits, not code size.")
+    for name in sorted(counts):
+        print(f"  {counts[name]:6d}  {name:<40} ({src[name]})")
+    print("  ⚠️  A URI here means some of that package was compiled in; it does not say")
+    print("      which feature uses it or that the code runs. `flutter`, `dart:`-adjacent")
+    print("      and the app's own package appear too. Not measured on --obfuscate builds.")
 
 
 def report_host(strings):
@@ -490,7 +663,7 @@ def report_keyword(strings, terms, whole_word=False):
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("apks", nargs="+", help="base.apk AND every split you pulled")
+    ap.add_argument("apks", nargs="+", help="base.apk AND every split you pulled; or an iOS .app directory")
     ap.add_argument("--keyword", help="comma-separated stems to hunt, e.g. transcri,chapter")
     ap.add_argument("--whole-word", action="store_true",
                     help="match literal keywords bounded by non-word characters (Unicode; underscore is a word character)")
@@ -498,7 +671,10 @@ def main():
     a = ap.parse_args()
 
     want = set(a.section.split(",")) if a.section else set(SECTIONS)
-    native, strings = collect(a.apks)
+    try:
+        native, strings = collect(a.apks)
+    except ValueError as e:
+        raise SystemExit(f"feature_probe: {e}")
     web = {w for _, w, _ in strings if w.lower().endswith(WEB_TEXT)}
     print(f"# feature_probe — {len(a.apks)} file(s), {len(strings)} strings, {len(native)} native libs, "
           f"{len(web)} H5 files (.js/.html)\n")
@@ -508,14 +684,16 @@ def main():
     # Where this script's ceiling is, say what goes past it.
     if web:
         print("  → H5 found. Module graph and endpoint trace past this script: references/rea.md\n")
-    if any(lib == "libapp.so" for lib, _, _ in native):
-        print("  → Flutter. Snapshot hash and a PARTIAL package list via REA: references/rea.md;")
-        print("    to check one package use --keyword package:<name>/\n")
+    if any(lib == "libapp.so" or lib.endswith("App.framework/App") for lib, _, _ in native):
+        print("  → Flutter. Full Dart package list: --section dart. Snapshot hash / engine")
+        print("    build id: REA identify-flutter-build (references/rea.md)\n")
 
     if "native" in want:
         report_native(native)
     if "sdk" in want:
         report_sdk(strings)
+    if "dart" in want:
+        report_dart(strings)
     if "host" in want:
         report_host(strings)
     if "api" in want:

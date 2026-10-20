@@ -3,6 +3,14 @@
 更新方法见 README「更新」一节。只记对使用者有影响的变化；完整历史看 `git log`。
 标题里的版本号必须等于 `.claude-plugin/plugin.json` 的 `version`（回归测试会检查），插件靠它判断有没有更新。
 
+## 1.2.0 · 2026-10-20
+
+- **iOS 能读包了**（限 Apple Silicon Mac 上用户自装的 iPhone App）：新增 `scripts/ios_bundle.py`；`feature_probe.py` 接受 `.app` 目录，
+  加密段置空后才读，永不读 `iTunesMetadata.plist`。见 `references/ios.md`。
+- `feature_probe.py --section dart`：Flutter 的 Dart 包完整清单（Android `libapp.so` 与 iOS `App.framework/App`）。
+- `walkthrough.py` 每一步可以用自己的录屏；`check_report.py --walkthrough steps.json` 核对每步挂的证据。
+- `references/rea.md` 新增「配合 REA 有没有质的提升」；README 重写。
+
 ## 1.1.0 · 2026-10-20
 
 - 可以作为 **Claude Code 插件**和 **Codex 插件**安装与更新（README「安装」「更新」）。两个平台共用 `.claude-plugin/plugin.json`。

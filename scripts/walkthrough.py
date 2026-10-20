@@ -16,7 +16,11 @@ steps.json (paths relative to the file):
       ]
     }
 Every step needs `action`, and a picture: `at` (seconds into the video) or `image`.
-`clip` is optional. Times count from the first frame, the way ffmpeg and
+`clip` is optional. A step may name its own `video` (screenrecord caps one recording,
+often at 180s); otherwise the top-level one is used. `evidence` is the id of the
+report.json evidence that records this observation — `check_report.py
+--walkthrough steps.json` checks it exists, is a device/browser observation, and
+cites the same recording. Times count from the first frame, the way ffmpeg and
 frame_diff.py count (pitfall 36).
 
 Output goes OUTSIDE this repo: walkthrough.html (plays the clips),
@@ -68,14 +72,15 @@ def check(spec):
             continue
         if "at" not in s and "image" not in s:
             errors.append(f"{where}: needs a picture — `at` (seconds into the video) or `image`")
-        if "at" in s and not spec.get("video"):
-            errors.append(f"{where}: `at` needs a top-level video")
+        video = s.get("video") or spec.get("video")
+        if "at" in s and not video:
+            errors.append(f"{where}: `at` needs a video (top-level or on the step)")
         if "at" in s and (not isinstance(s["at"], (int, float)) or s["at"] < 0):
             errors.append(f"{where}: `at` must be seconds >= 0")
         clip = s.get("clip")
         if clip is not None:
-            if not spec.get("video"):
-                errors.append(f"{where}: `clip` needs a top-level video")
+            if not video:
+                errors.append(f"{where}: `clip` needs a video (top-level or on the step)")
             elif (not isinstance(clip, list) or len(clip) != 2
                   or not all(isinstance(v, (int, float)) for v in clip) or not 0 <= clip[0] < clip[1]):
                 errors.append(f"{where}: `clip` must be [start, end] with 0 <= start < end")
@@ -96,14 +101,24 @@ def build(spec_path, out):
     base = os.path.dirname(os.path.abspath(spec_path))
     os.makedirs(out, exist_ok=True)
 
-    video = None
-    if spec.get("video"):
-        src = os.path.join(base, spec["video"])
-        video = os.path.basename(src)
-        shutil.copy2(src, os.path.join(out, video))
+    copied = {}
+
+    def local_video(name):
+        # One copy per recording; two different files with one basename must not collide.
+        src = os.path.abspath(os.path.join(base, name))
+        if src not in copied:
+            stem, ext = os.path.splitext(os.path.basename(src))
+            dest = os.path.basename(src)
+            if dest in copied.values():
+                dest = f"{stem}-{len(copied)}{ext}"
+            shutil.copy2(src, os.path.join(out, dest))
+            copied[src] = dest
+        return copied[src]
 
     rows = []
     for n, s in enumerate(spec["steps"], 1):
+        name = s.get("video") or spec.get("video")
+        video = local_video(name) if name and ("at" in s or s.get("clip")) else None
         img = f"step{n:02d}.png"
         if "image" in s:
             shutil.copy2(os.path.join(base, s["image"]), os.path.join(out, img))
@@ -111,12 +126,12 @@ def build(spec_path, out):
         else:
             frame_at(os.path.join(out, video), s["at"], os.path.join(out, img))
             source = f"{video} @ {clock(s['at'])}"
-        rows.append((n, s, img, source))
+        rows.append((n, s, img, source, video))
 
     title = spec.get("title") or "Walkthrough"
     md = [f"## 操作路径：{title}", "", "> 竞品分析用。截图与录屏来自真机实测，仅用于分析。", ""]
     page = []
-    for n, s, img, source in rows:
+    for n, s, img, source, video in rows:
         tag = "[device]" + (f" {s['evidence']}" if s.get("evidence") else "")
         clip = s.get("clip")
         md.append(f"{n}. **{s['action']}**")

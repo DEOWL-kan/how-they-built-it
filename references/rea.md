@@ -9,18 +9,33 @@
 | 命令 | 结果 | 样本 |
 |---|---|---|
 | `analyze-javascript-application` + `trace-application-feature` | ✅ 能跑 | 自制 3 文件 H5 |
-| `identify-flutter-build` / `inspect-dart-aot` | ✅ 能跑，依赖清单被截断（见下） | 自有 Flutter release APK |
+| `identify-flutter-build` / `inspect-dart-aot` | ✅ 能跑，依赖清单被截断（见下）；完整清单改用我方 `feature_probe.py --section dart` | 自有 Flutter release APK |
+| `decode-interface-builder`（2026-10-20） | ✅ 能跑：64 个 nib、3027 个节点、904 条连线（outlet / target-action） | Mac 上已装的一个原生 iPhone App |
 | `search-android-classes` 等 Android 命令 | ⛔ 未验证：光有 `jadx` 不够，还要另外提供 `jadx-headless-mcp 0.7.1` JAR 并设 `REA_JADX_MCP_JAR` | — |
 | `xrefs` / `trace --provider ghidra` | ⛔ 未验证：本机没有 Ghidra | — |
 
 版本变化快，用之前先跑 `rea --help` 确认命令还在。
+
+## 配合 REA 有没有质的提升
+
+**分场景看，只有两处是质变；其余是锦上添花、不如我方，或者还没验证。** REA 和本技能一样只做静态分析，
+「功能是否上线、运行时走哪条路」仍然要真机，这一点它改变不了。
+
+| 场景 | 提升 | 依据 |
+|---|---|---|
+| **iOS 用 nib/storyboard 做的界面** | ⭐ **质变** | `decode-interface-builder` 把编译后的 nib 解成控件树：类名、文字、字体、颜色、约束、outlet 和按钮绑定的方法名。标准库做不到。⚠️ 只覆盖 Interface Builder 做的界面；SwiftUI、纯代码、Flutter 界面没有 nib；默认 64 个文件封顶（`--max-documents` 可调） |
+| **原生库是否真的被业务调用**（如 onnxruntime） | ⭐ 可能质变，**未验证** | Ghidra 驱动的 xrefs/trace 能回答「包里有」到「代码里调了」之间的空白；本机没有 Ghidra，没跑过 |
+| H5 / 网页包 | 增量 | 模块图和字面量接口能出来；拼接出来的 URL 一样看不到 |
+| Flutter 依赖清单 | ✖ 不如我方 | REA 只返回字母序前 500 条（实测 27 个包），我方 `--section dart` 对原始字节 138/138 |
+| Android Java/Kotlin 代码 | 未验证 | 要另配 `jadx-headless-mcp` JAR；我方已有直接用 JADX 的流程（`code-tracing.md`） |
 
 ## 什么时候用
 
 | 我方脚本的上限 | REA 能补什么 | 命令 |
 |---|---|---|
 | `feature_probe.py` 读到了 H5，但只给 host/关键词；从压缩后的 JS 长行里不抠路径（pitfalls 第 23、35 条） | 模块图、路由、API、字符串种子的可达追踪 | 先把 H5 目录解到**仓库外**的临时目录，`rea analyze-javascript-application <目录> --json > app.json`，再按其文档构造种子跑 `rea trace-application-feature` |
-| Flutter 应用的 `report_sdk` 一项总是「none」（第三方包在 `libapp.so` 里） | Dart 快照里的 `package:` URI 清单，也就是依赖清单 | `rea inspect-dart-aot <含 lib/<abi>/libapp.so 的 APK>`；Flutter 一般在 ABI split 里，别只给 base |
+| Flutter 想知道 Dart SDK 构建信息 | 快照哈希、引擎 build-id（依赖清单用我方 `feature_probe.py --section dart`，更全） | `rea identify-flutter-build <含 lib/<abi>/libapp.so 的 APK>` |
+| iOS 界面是 nib/storyboard 做的 | 控件树、文字、字体、颜色、约束、按钮方法名 | `rea decode-interface-builder "/Applications/X.app/Wrapper/Y.app"`（见 `ios.md`） |
 | `code-tracing.md` 里手工跑 JADX | 封装好的类、方法搜索和引用追踪（未验证，需另配 JAR） | `rea inspect-android-package` / `search-android-classes` / `inspect-android-method` / `trace-android-references` |
 | 「包里有 onnxruntime」以后，想知道业务代码是否调用它 | 原生库的 xrefs 和调用追踪（L4） | `rea xrefs` / `rea trace` 加 `--provider ghidra`，需要本机已有的 Ghidra |
 
@@ -41,8 +56,7 @@
    rea analyze-javascript-application /tmp/h5-target/assets/<H5 所在目录> --json > app.json
    ```
    追踪某个字符串（比如 `retriever_info`），按 REA 文档用 `app.json` 构造输入跑 `trace-application-feature`。
-2. **有 `libapp.so`（Flutter）** → `rea identify-flutter-build` 拿快照哈希和引擎信息，`rea inspect-dart-aot` 拿部分依赖清单；
-   要确认某个包在不在，仍用 `feature_probe.py --keyword package:<包名>/`（原因见下文的截断问题）。
+2. **有 `libapp.so`（Flutter）** → 依赖清单用 `feature_probe.py --section dart`（完整）；要快照哈希和引擎信息再用 `rea identify-flutter-build`。
 3. **想知道原生库是否被业务调用** → 用户本机有 Ghidra 时才走 `rea xrefs`/`trace --provider ghidra`，属于 L4。
 
 REA 的结论回到本技能的证据体系里：一律 `[package]`，写进 `check_report.py` 校验的报告；运行时结论仍要真机。

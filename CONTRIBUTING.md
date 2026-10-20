@@ -29,6 +29,11 @@ Plugin installs (Claude Code and Codex) update only when `version` in
 path is given, and rejects `./` and `.`; `./.` is the one spelling that exposes the
 root skill in both clients (pitfall 39). Do not "tidy" it.
 
+## README
+
+`README.md` and `README.zh-CN.md` mirror each other section for section. Change both in
+the same commit; counts in them (regression samples, pitfalls) must match the repo.
+
 ## Fixing a bug
 
 Three things, not one:
